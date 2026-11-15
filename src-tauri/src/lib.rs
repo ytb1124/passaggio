@@ -18,7 +18,7 @@ fn emit_backend_event(app: &AppHandle, job_id: &str, event: Value) {
     job_id: job_id.to_string(),
     event,
   };
-  if let Err(error) = app.emit("trackform://backend-event", payload) {
+  if let Err(error) = app.emit("passaggio://backend-event", payload) {
     eprintln!("Failed to emit backend event: {error}");
   }
 }
@@ -34,14 +34,14 @@ fn safe_file_name(file_name: &str) -> String {
 
 fn bundled_sidecar(app: &AppHandle, project_root: &Path) -> Option<std::path::PathBuf> {
   let candidates = [
-    project_root.join("dist/trackform-backend/trackform-backend"),
+    project_root.join("dist/passaggio-backend/passaggio-backend"),
     project_root.join(
-      "src-tauri/binaries/trackform-backend-aarch64-apple-darwin/trackform-backend",
+      "src-tauri/binaries/passaggio-backend-aarch64-apple-darwin/passaggio-backend",
     ),
     app.path()
       .resource_dir()
       .ok()?
-      .join("_up_/dist/trackform-backend/trackform-backend"),
+      .join("_up_/dist/passaggio-backend/passaggio-backend"),
   ];
   candidates.into_iter().find(|candidate| candidate.is_file())
 }
@@ -75,7 +75,7 @@ fn start_python_job(
   let sidecar = bundled_sidecar(&app, &project_root);
   if sidecar.is_none() && (!cfg!(debug_assertions) || !python.is_file() || !cli.is_file()) {
     return Err(format!(
-      "Trackform sidecar not found. Expected sidecar under {}/dist/trackform-backend.",
+      "Passaggio sidecar not found. Expected sidecar under {}/dist/passaggio-backend.",
       project_root.display()
     ));
   }
@@ -85,7 +85,7 @@ fn start_python_job(
     .map_err(|error| format!("Could not create job id: {error}"))?
     .as_nanos();
   let job_id = format!("desktop-{nonce}");
-  let job_dir = std::env::temp_dir().join("trackform").join(&job_id);
+  let job_dir = std::env::temp_dir().join("passaggio").join(&job_id);
   let output_dir = job_dir.join("outputs");
   fs::create_dir_all(&output_dir)
     .map_err(|error| format!("Could not create job directory: {error}"))?;
@@ -97,7 +97,7 @@ fn start_python_job(
     let mut command = Command::new(sidecar);
     command.arg(&kind);
     if let Ok(resource_dir) = app.path().resource_dir() {
-      command.env("TRACKFORM_RESOURCE_DIR", resource_dir);
+      command.env("PASSAGGIO_RESOURCE_DIR", resource_dir);
     }
     command
   } else {
@@ -121,11 +121,11 @@ fn start_python_job(
 
   let mut child = command
     .spawn()
-    .map_err(|error| format!("Could not start Trackform CLI: {error}"))?;
+    .map_err(|error| format!("Could not start Passaggio CLI: {error}"))?;
   let stdout = child
     .stdout
     .take()
-    .ok_or_else(|| "Trackform CLI stdout was not available.".to_string())?;
+    .ok_or_else(|| "Passaggio CLI stdout was not available.".to_string())?;
   let stderr = child.stderr.take();
   let app_for_job = app.clone();
   let job_id_for_job = job_id.clone();
@@ -136,7 +136,7 @@ fn start_python_job(
         let mut text = String::new();
         let mut reader = BufReader::new(stderr);
         if reader.read_to_string(&mut text).is_ok() && !text.trim().is_empty() {
-          eprintln!("Trackform CLI stderr:\n{text}");
+          eprintln!("Passaggio CLI stderr:\n{text}");
         }
       });
     }
@@ -154,7 +154,7 @@ fn start_python_job(
           }
           Err(error) => eprintln!("Ignoring non-JSON CLI stdout: {error}: {line}"),
         },
-        Err(error) => eprintln!("Could not read Trackform CLI stdout: {error}"),
+        Err(error) => eprintln!("Could not read Passaggio CLI stdout: {error}"),
       }
     }
 
@@ -162,12 +162,12 @@ fn start_python_job(
       Ok(status) if !status.success() && !saw_terminal_event => emit_backend_event(
         &app_for_job,
         &job_id_for_job,
-        json!({"type": "error", "error": format!("Trackform CLI exited with {status}")}),
+        json!({"type": "error", "error": format!("Passaggio CLI exited with {status}")}),
       ),
       Err(error) => emit_backend_event(
         &app_for_job,
         &job_id_for_job,
-        json!({"type": "error", "error": format!("Could not wait for Trackform CLI: {error}")}),
+        json!({"type": "error", "error": format!("Could not wait for Passaggio CLI: {error}")}),
       ),
       _ => {}
     }

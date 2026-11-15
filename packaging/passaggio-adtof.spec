@@ -1,9 +1,9 @@
 # ADTOF drum transcription worker for the desktop app (2026-10-25).
 # TensorFlow + madmom conflict with the main sidecar's torch stack, so ADTOF ships as its own
-# PyInstaller onedir next to dist/trackform-backend. The frozen pipeline calls it when the
+# PyInstaller onedir next to dist/passaggio-backend. The frozen pipeline calls it when the
 # isolated .venv-adtof is not available. ADTOF is CC BY-NC-SA 4.0 (non-commercial).
 # Build with:
-#   .venv-adtof/bin/python -m PyInstaller packaging/trackform-adtof.spec --noconfirm --clean
+#   .venv-adtof/bin/python -m PyInstaller packaging/passaggio-adtof.spec --noconfirm --clean
 
 from pathlib import Path
 
@@ -29,5 +29,5 @@ a = Analysis(
     noarchive=False,
 )
 pyz = PYZ(a.pure)
-exe = EXE(pyz, a.scripts, [], exclude_binaries=True, name="trackform-adtof", console=True, upx=False)
-coll = COLLECT(exe, a.binaries, a.datas, strip=False, upx=False, name="trackform-adtof")
+exe = EXE(pyz, a.scripts, [], exclude_binaries=True, name="passaggio-adtof", console=True, upx=False)
+coll = COLLECT(exe, a.binaries, a.datas, strip=False, upx=False, name="passaggio-adtof")

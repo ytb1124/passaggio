@@ -1,5 +1,5 @@
 {
-  "name": "trackform",
+  "name": "passaggio",
   "version": "0.3.0",
   "private": true,
   "scripts": {
@@ -9,7 +9,7 @@
     "lint": "eslint",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
-    "sidecar:build": ".venv-backend/bin/python -m PyInstaller packaging/trackform-backend.spec --noconfirm --clean"
+    "sidecar:build": ".venv-backend/bin/python -m PyInstaller packaging/passaggio-backend.spec --noconfirm --clean"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.11.0",

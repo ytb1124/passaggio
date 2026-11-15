@@ -56,7 +56,7 @@ def fetch(url: str, dest: Path) -> Path:
         return dest
     dest.parent.mkdir(parents=True, exist_ok=True)
     tmp = dest.with_suffix(dest.suffix + ".part")
-    req = urllib.request.Request(url, headers={"User-Agent": "trackform-eval"})
+    req = urllib.request.Request(url, headers={"User-Agent": "passaggio-eval"})
     with urllib.request.urlopen(req, timeout=120) as r, open(tmp, "wb") as f:
         while chunk := r.read(1 << 20):
             f.write(chunk)

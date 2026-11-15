@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "Trackform",
+  "productName": "Passaggio",
   "version": "0.3.0",
-  "identifier": "com.trackform.desktop",
+  "identifier": "com.passaggio.desktop",
   "build": {
     "frontendDist": "../out",
     "devUrl": "http://localhost:3000",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Trackform",
+        "title": "Passaggio",
         "width": 1440,
         "height": 900,
         "minWidth": 1080,
@@ -35,8 +35,8 @@
     "active": true,
     "targets": "all",
     "resources": [
-      "../dist/trackform-backend",
-      "../dist/trackform-adtof",
+      "../dist/passaggio-backend",
+      "../dist/passaggio-adtof",
       "resources/ffmpeg"
     ],
     "icon": [

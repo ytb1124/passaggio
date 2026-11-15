@@ -53,5 +53,5 @@
 
 - main 병합·push: `355bdc6` (Merge overnight/2026-10-25), 브랜치도 push.
 - 태그 `v0.3.0` push, 릴리스: https://github.com/ytb1124/audio-to-midi/releases/tag/v0.3.0
-- 자산 `Trackform_0.3.0_aarch64.dmg` 1,139,464,201 바이트(API 확인, 로컬과 일치), SHA-256 `d9be55c29ecaaee575953c09e7e2f977cd1ab2fa9bfe206b5ff33e5809abeb67`.
+- 0.3.0 Apple Silicon DMG 원본 1,139,464,201 바이트(API 확인, 로컬과 일치), SHA-256 `d9be55c29ecaaee575953c09e7e2f977cd1ab2fa9bfe206b5ff33e5809abeb67`.
 - 0.2.0 대비 DMG가 커진 이유: ADTOF(TensorFlow) 워커 번들(약 1.4 GB 압축 전)과 Beat This! 체크포인트.

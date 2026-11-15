@@ -132,7 +132,7 @@ const MIN_NOTE_DURATION = 0.05;
 const MIN_PIANO_MIDI = 21;
 const MAX_PIANO_MIDI = 108;
 const STEM_ESTIMATE_STORAGE_KEY = "passaggio-stem-estimate-factor";
-// Pre-rename key (app was called Trackform). Read once and migrated so saved calibration survives.
+// Migrate the previous storage key so saved calibration survives the rename.
 const LEGACY_STEM_ESTIMATE_STORAGE_KEY = "trackform-stem-estimate-factor";
 
 function readStemEstimateFactor(): number {

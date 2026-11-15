@@ -52,6 +52,6 @@
 | DMG | `bundle_dmg.sh` 성공(hdiutil 대체 불필요), Applications 링크 포함. 마운트한 DMG 안 백엔드로 피아노 sha256 일치, 드럼 변환 backend=adtof(번들 워커) |
 
 - main 병합·push: `355bdc6` (Merge overnight/2026-10-25), 브랜치도 push.
-- 태그 `v0.3.0` push, 릴리스: https://github.com/ytb1124/audio-to-midi/releases/tag/v0.3.0
+- 태그 `v0.3.0` push. 현재 공개 설치 파일은 [최신 Passaggio 릴리스](https://github.com/ytb1124/audio-to-midi/releases/latest)에 있다.
 - 0.3.0 Apple Silicon DMG 원본 1,139,464,201 바이트(API 확인, 로컬과 일치), SHA-256 `d9be55c29ecaaee575953c09e7e2f977cd1ab2fa9bfe206b5ff33e5809abeb67`.
 - 0.2.0 대비 DMG가 커진 이유: ADTOF(TensorFlow) 워커 번들(약 1.4 GB 압축 전)과 Beat This! 체크포인트.

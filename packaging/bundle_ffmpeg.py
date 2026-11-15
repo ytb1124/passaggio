@@ -1,4 +1,4 @@
-"""Bundle an arm64 ffmpeg and its Homebrew dylib closure for Trackform.
+"""Bundle an arm64 ffmpeg and its Homebrew dylib closure for Passaggio.
 
 The resulting directory is consumed as a Tauri resource.  System frameworks
 and Apple-provided libraries are intentionally not copied; Homebrew dylibs are
@@ -16,7 +16,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DEST = ROOT / "src-tauri" / "resources" / "ffmpeg"
-FFMPEG = Path(os.environ.get("TRACKFORM_FFMPEG", "/opt/homebrew/bin/ffmpeg"))
+FFMPEG = Path(os.environ.get("PASSAGGIO_FFMPEG", "/opt/homebrew/bin/ffmpeg"))
 
 
 def deps(path: Path) -> list[str]:

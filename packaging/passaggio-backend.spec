@@ -1,6 +1,6 @@
-# Apple Silicon development sidecar for Trackform.
+# Apple Silicon development sidecar for Passaggio.
 # Build with:
-#   .venv-backend/bin/python -m PyInstaller packaging/trackform-backend.spec
+#   .venv-backend/bin/python -m PyInstaller packaging/passaggio-backend.spec
 
 from pathlib import Path
 
@@ -115,7 +115,7 @@ exe = EXE(
     pyz,
     analysis.scripts,
     [],
-    name="trackform-backend",
+    name="passaggio-backend",
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -130,5 +130,5 @@ COLLECT(
     analysis.datas,
     strip=False,
     upx=False,
-    name="trackform-backend",
+    name="passaggio-backend",
 )

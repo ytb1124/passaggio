@@ -219,13 +219,13 @@ select {
   -webkit-backdrop-filter: blur(24px) saturate(160%);
 }
 
-.trackform-onboarding {
+.passaggio-onboarding {
   display: grid;
   min-height: 100vh;
   place-items: center;
 }
 
-.trackform-onboarding .mode-launcher {
+.passaggio-onboarding .mode-launcher {
   position: relative;
   width: min(920px, 100%);
   padding: clamp(28px, 6vw, 64px);
@@ -1009,7 +1009,7 @@ select {
   font-size: 15px;
 }
 
-.trackform-hero-brand,
+.passaggio-hero-brand,
 .workspace-brand,
 .workspace-header-actions,
 .playback-controls,
@@ -1018,12 +1018,12 @@ select {
   align-items: center;
 }
 
-.trackform-hero-brand {
+.passaggio-hero-brand {
   justify-content: center;
   gap: 12px;
 }
 
-.trackform-mark {
+.passaggio-mark {
   display: inline-flex;
   align-items: flex-end;
   gap: 3px;
@@ -1031,16 +1031,16 @@ select {
   height: 25px;
 }
 
-.trackform-mark i {
+.passaggio-mark i {
   display: block;
   width: 7px;
   background: var(--accent);
   box-shadow: 0 4px 14px rgba(0, 122, 255, 0.22);
 }
 
-.trackform-mark i:nth-child(1) { height: 10px; }
-.trackform-mark i:nth-child(2) { height: 18px; }
-.trackform-mark i:nth-child(3) { height: 25px; }
+.passaggio-mark i:nth-child(1) { height: 10px; }
+.passaggio-mark i:nth-child(2) { height: 18px; }
+.passaggio-mark i:nth-child(3) { height: 25px; }
 
 .brand-category {
   margin: 24px 0 0 !important;
@@ -1138,15 +1138,15 @@ select {
   gap: 10px;
 }
 
-.workspace-brand .trackform-mark {
+.workspace-brand .passaggio-mark {
   width: 23px;
   height: 22px;
 }
 
-.workspace-brand .trackform-mark i { width: 6px; }
-.workspace-brand .trackform-mark i:nth-child(1) { height: 9px; }
-.workspace-brand .trackform-mark i:nth-child(2) { height: 15px; }
-.workspace-brand .trackform-mark i:nth-child(3) { height: 22px; }
+.workspace-brand .passaggio-mark i { width: 6px; }
+.workspace-brand .passaggio-mark i:nth-child(1) { height: 9px; }
+.workspace-brand .passaggio-mark i:nth-child(2) { height: 15px; }
+.workspace-brand .passaggio-mark i:nth-child(3) { height: 22px; }
 
 .logic-daw-header .workspace-brand p {
   margin: 0;

@@ -1,8 +1,8 @@
-# Trackform
+# Passaggio
 
 An audio-to-MIDI workspace for turning recorded musical ideas into editable performance material.
 
-Trackform combines automatic music transcription, stem separation, MIDI editing, and browser playback in one workflow. The browser interface runs as a Next.js application; the processing layer is a FastAPI service that calls specialist transcription models. The same processing pipeline can be packaged as a local Tauri desktop application for offline-oriented work.
+Passaggio combines automatic music transcription, stem separation, MIDI editing, and browser playback in one workflow. The browser interface runs as a Next.js application; the processing layer is a FastAPI service that calls specialist transcription models. The same processing pipeline can be packaged as a local Tauri desktop application for offline-oriented work.
 
 ## What it does
 
@@ -103,10 +103,10 @@ npm run tauri:dev     # development window
 npm run tauri:build   # .app and .dmg under src-tauri/target/release/bundle/
 ```
 
-The desktop bridge reports transcription progress through Tauri events and keeps generated files local to the job. The sidecar bundles Transkun, Basic Pitch, HT-Demucs, Beat This! and the in-house classifiers. ADTOF ships as a second bundled worker (`packaging/trackform-adtof.spec`, built from `.venv-adtof`), so the desktop app uses the same default drum model as the web backend. YourMT3+ is not bundled; it is optional and not a default.
+The desktop bridge reports transcription progress through Tauri events and keeps generated files local to the job. The sidecar bundles Transkun, Basic Pitch, HT-Demucs, Beat This! and the in-house classifiers. ADTOF ships as a second bundled worker (`packaging/passaggio-adtof.spec`, built from `.venv-adtof`), so the desktop app uses the same default drum model as the web backend. YourMT3+ is not bundled; it is optional and not a default.
 
 ```bash
-.venv-adtof/bin/python -m PyInstaller packaging/trackform-adtof.spec --noconfirm --clean --distpath dist --workpath packaging/build
+.venv-adtof/bin/python -m PyInstaller packaging/passaggio-adtof.spec --noconfirm --clean --distpath dist --workpath packaging/build
 ```
 
 Prebuilt macOS (Apple Silicon) builds are attached to [GitHub Releases](https://github.com/ytb1124/audio-to-midi/releases). They are not code-signed. On first launch, right-click the app and choose **Open**.

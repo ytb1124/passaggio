@@ -1,4 +1,4 @@
-"""FastAPI compatibility layer for the shared Trackform pipelines.
+"""FastAPI compatibility layer for the shared Passaggio pipelines.
 
 The transformation implementation lives in :mod:`backend.pipeline`.  This
 module keeps the existing web API available while the desktop CLI uses the

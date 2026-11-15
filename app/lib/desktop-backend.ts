@@ -53,7 +53,7 @@ async function runPythonJob<T>(
   },
   onProgress?: DesktopProgressHandler
 ): Promise<T> {
-  const eventName = "trackform://backend-event";
+  const eventName = "passaggio://backend-event";
   let unlisten: UnlistenFn | undefined;
   let settled = false;
 

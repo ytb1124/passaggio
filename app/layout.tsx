@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Trackform — Audio to MIDI Workspace",
+  title: "Passaggio — Audio to MIDI Workspace",
   description:
     "An audio-to-MIDI workspace for transcription, stem separation, MIDI editing, and performance preparation.",
 };

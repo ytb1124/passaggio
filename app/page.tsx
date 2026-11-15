@@ -131,7 +131,25 @@ const RULER_HEIGHT = 28;
 const MIN_NOTE_DURATION = 0.05;
 const MIN_PIANO_MIDI = 21;
 const MAX_PIANO_MIDI = 108;
-const STEM_ESTIMATE_STORAGE_KEY = "trackform-stem-estimate-factor";
+const STEM_ESTIMATE_STORAGE_KEY = "passaggio-stem-estimate-factor";
+// Pre-rename key (app was called Trackform). Read once and migrated so saved calibration survives.
+const LEGACY_STEM_ESTIMATE_STORAGE_KEY = "trackform-stem-estimate-factor";
+
+function readStemEstimateFactor(): number {
+  try {
+    let raw = window.localStorage.getItem(STEM_ESTIMATE_STORAGE_KEY);
+    if (raw === null) {
+      raw = window.localStorage.getItem(LEGACY_STEM_ESTIMATE_STORAGE_KEY);
+      if (raw !== null) {
+        window.localStorage.setItem(STEM_ESTIMATE_STORAGE_KEY, raw);
+        window.localStorage.removeItem(LEGACY_STEM_ESTIMATE_STORAGE_KEY);
+      }
+    }
+    return raw === null ? NaN : Number(raw);
+  } catch {
+    return NaN;
+  }
+}
 const DEFAULT_STEM_ESTIMATE_SECONDS = 4 * 60;
 const MIN_STEM_ESTIMATE_SECONDS = 90;
 const MAX_STEM_ESTIMATE_SECONDS = 15 * 60;
@@ -242,7 +260,7 @@ function estimateStemSeparationSeconds(audioDurationSeconds: number | null) {
 
   const savedFactor =
     typeof window !== "undefined"
-      ? Number(window.localStorage.getItem(STEM_ESTIMATE_STORAGE_KEY))
+      ? readStemEstimateFactor()
       : NaN;
   const factor =
     Number.isFinite(savedFactor) && savedFactor > 0.1 && savedFactor < 6
@@ -273,9 +291,7 @@ function saveStemEstimateCalibration(
   }
 
   const measuredFactor = elapsedSeconds / audioDurationSeconds;
-  const previousFactor = Number(
-    window.localStorage.getItem(STEM_ESTIMATE_STORAGE_KEY)
-  );
+  const previousFactor = readStemEstimateFactor();
   const nextFactor =
     Number.isFinite(previousFactor) && previousFactor > 0.1 && previousFactor < 6
       ? previousFactor * 0.65 + measuredFactor * 0.35
@@ -2628,8 +2644,8 @@ export default function Home() {
       >
         <header className="logic-daw-header">
           <div className="workspace-brand">
-            <span className="trackform-mark" aria-hidden="true"><i /><i /><i /></span>
-            <div><p>TRACKFORM</p><h1>{copy.stemMixer}</h1></div>
+            <span className="passaggio-mark" aria-hidden="true"><i /><i /><i /></span>
+            <div><p>PASSAGGIO</p><h1>{copy.stemMixer}</h1></div>
           </div>
           <span className="workspace-tagline">{copy.stemMixerCopy}</span>
           <div className="workspace-header-actions">
@@ -2645,7 +2661,7 @@ export default function Home() {
           <div className="stem-transport">
             <div>
               <span className="stem-session-label">{copy.imported}</span>
-              <strong>{stemFileName || "Trackform stems"}</strong>
+              <strong>{stemFileName || "Passaggio stems"}</strong>
               <small>{stemTempoBpm ? `${stemTempoBpm} BPM · 4/4` : copy.analyzingTempo}</small>
             </div>
             <div className="stem-transport-buttons">
@@ -2842,7 +2858,7 @@ export default function Home() {
   if (!hasSelectedMode) {
     return (
       <main
-        className="logic-daw trackform-onboarding"
+        className="logic-daw passaggio-onboarding"
         style={{ padding: "32px clamp(18px, 4vw, 56px)", fontFamily: "sans-serif" }}
       >
         <section className="mode-launcher" style={glassPanelStyle}>
@@ -2850,13 +2866,13 @@ export default function Home() {
             <button aria-pressed={language === "en"} onClick={() => setLanguage("en")}>EN</button>
             <button aria-pressed={language === "ko"} onClick={() => setLanguage("ko")}>한국어</button>
           </div>
-          <div className="trackform-hero-brand" aria-label="Trackform">
-            <span className="trackform-mark" aria-hidden="true">
+          <div className="passaggio-hero-brand" aria-label="Passaggio">
+            <span className="passaggio-mark" aria-hidden="true">
               <i />
               <i />
               <i />
             </span>
-            <p className="brand-kicker">TRACKFORM</p>
+            <p className="brand-kicker">PASSAGGIO</p>
           </div>
           <p className="brand-category">{copy.brandCategory}</p>
           <h1>{copy.heroTitle}</h1>
@@ -2865,7 +2881,7 @@ export default function Home() {
           </p>
           <div className="stem-upload-panel">
             <input
-              id="trackform-stem-upload"
+              id="passaggio-stem-upload"
               className="stem-upload-input"
               type="file"
               accept="audio/*"
@@ -2875,7 +2891,7 @@ export default function Home() {
             />
             <label
               className={`stem-upload-trigger${isSeparatingStems ? " is-disabled" : ""}`}
-              htmlFor="trackform-stem-upload"
+              htmlFor="passaggio-stem-upload"
             >
               <span className="stem-upload-icon"><MusicUploadIcon /></span>
               <span className="stem-upload-text">
@@ -2926,7 +2942,7 @@ export default function Home() {
           <div className="stem-modal-backdrop" role="dialog" aria-modal="true" aria-label={copy.preparingStemSession}>
             <div className="stem-progress-modal" style={glassPanelStyle}>
               <span className="stem-modal-icon" aria-hidden="true"><MusicUploadIcon /></span>
-              <p className="stem-modal-kicker">TRACKFORM STEMS</p>
+              <p className="stem-modal-kicker">PASSAGGIO STEMS</p>
               <h2>{copy.preparingStemSession}</h2>
               <p>{stemStatus || copy.separatingStems}</p>
               <div className="stem-modal-countdown">
@@ -2950,8 +2966,8 @@ export default function Home() {
       >
       <header className="logic-daw-header">
         <div className="workspace-brand">
-          <span className="trackform-mark" aria-hidden="true"><i /><i /><i /></span>
-          <div><p>TRACKFORM</p><h1>{copy.studio}</h1></div>
+          <span className="passaggio-mark" aria-hidden="true"><i /><i /><i /></span>
+          <div><p>PASSAGGIO</p><h1>{copy.studio}</h1></div>
         </div>
         <span className="workspace-tagline">{copy.tagline}</span>
         <div className="workspace-header-actions">

@@ -71,13 +71,13 @@ def _script_cmd(script: Path, *args: str) -> list[str]:
 def _tool_cmd(name: str, *args: str) -> list[str]:
     """Run a console-script dependency in both venv and frozen modes."""
     if getattr(sys, "frozen", False):
-        return [sys.executable, "--trackform-tool", name, *args]
+        return [sys.executable, "--passaggio-tool", name, *args]
     return [_venv_exe(name), *args]
 
 
 def _basic_pitch_cmd(*args: str) -> list[str]:
     if getattr(sys, "frozen", False):
-        return [sys.executable, "--trackform-tool", "basic_pitch", *args]
+        return [sys.executable, "--passaggio-tool", "basic_pitch", *args]
     exe = _venv_exe("basic-pitch")
     if Path(exe).exists() or shutil.which("basic-pitch"):
         return [exe, *args]
@@ -283,13 +283,13 @@ def run_general_mode(
 
 def _adtof_cmd() -> list[str] | None:
     """ADTOF 실행 명령. 소스 실행은 격리 venv, 데스크톱(frozen)은 함께 번들된 PyInstaller 워커
-    (dist/trackform-adtof, packaging/trackform-adtof.spec). 둘 다 없으면 None(→ E-GMD 폴백)."""
+    (dist/passaggio-adtof, packaging/passaggio-adtof.spec). 둘 다 없으면 None(→ E-GMD 폴백)."""
     py = _isolated_py(".venv-adtof")
     if py is not None and ADTOF_SCRIPT_PATH.exists():
         return [py, str(ADTOF_SCRIPT_PATH)]
     if getattr(sys, "frozen", False):
         sidecar_dir = Path(sys.executable).resolve().parent
-        worker = sidecar_dir.parent / "trackform-adtof" / "trackform-adtof"
+        worker = sidecar_dir.parent / "passaggio-adtof" / "passaggio-adtof"
         if worker.exists():
             return [str(worker)]
     return None

@@ -1,4 +1,4 @@
-"""JSONL command-line entry point for Trackform audio processing."""
+"""JSONL command-line entry point for Passaggio audio processing."""
 
 from __future__ import annotations
 
@@ -46,7 +46,7 @@ def _dispatch_frozen_worker() -> bool:
         runpy.run_path(script_path, run_name="__main__")
         return True
 
-    if len(argv) >= 2 and argv[0] == "--trackform-tool":
+    if len(argv) >= 2 and argv[0] == "--passaggio-tool":
         tool = argv[1]
         sys.argv = [tool, *argv[2:]]
         if tool == "transkun":
@@ -78,7 +78,7 @@ def _dispatch_frozen_worker() -> bool:
 
 
 def build_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(description="Trackform audio processing CLI")
+    parser = argparse.ArgumentParser(description="Passaggio audio processing CLI")
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     transcribe_parser = subparsers.add_parser(
@@ -178,7 +178,7 @@ def main() -> int:
         emit({"type": "error", "error": "Interrupted"})
         return 130
     except Exception as error:
-        print("Trackform CLI failed:", file=sys.stderr)
+        print("Passaggio CLI failed:", file=sys.stderr)
         traceback.print_exc(file=sys.stderr)
         emit({"type": "error", "error": str(error)})
         return 1
@@ -201,7 +201,7 @@ if __name__ == "__main__":
             os.environ["TRANSFORMERS_OFFLINE"] = "1"
 
         resource_root = Path(
-            os.environ.get("TRACKFORM_RESOURCE_DIR", str(bundle_root))
+            os.environ.get("PASSAGGIO_RESOURCE_DIR", str(bundle_root))
         )
         ffmpeg_candidates = (
             resource_root / "ffmpeg" / "bin" / "ffmpeg",
@@ -210,7 +210,7 @@ if __name__ == "__main__":
         )
         for ffmpeg in ffmpeg_candidates:
             if ffmpeg.is_file():
-                os.environ["TRACKFORM_FFMPEG"] = str(ffmpeg)
+                os.environ["PASSAGGIO_FFMPEG"] = str(ffmpeg)
                 os.environ["IMAGEIO_FFMPEG_EXE"] = str(ffmpeg)
                 os.environ["PATH"] = f"{ffmpeg.parent}:{os.environ.get('PATH', '')}"
                 break

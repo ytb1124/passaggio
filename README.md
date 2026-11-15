@@ -109,7 +109,7 @@ The desktop bridge reports transcription progress through Tauri events and keeps
 .venv-adtof/bin/python -m PyInstaller packaging/passaggio-adtof.spec --noconfirm --clean --distpath dist --workpath packaging/build
 ```
 
-Prebuilt macOS (Apple Silicon) builds are attached to [GitHub Releases](https://github.com/ytb1124/audio-to-midi/releases). They are not code-signed. On first launch, right-click the app and choose **Open**.
+Prebuilt macOS (Apple Silicon) builds are attached to [GitHub Releases](https://github.com/ytb1124/passaggio/releases). They are not code-signed. On first launch, right-click the app and choose **Open**.
 
 ## Evaluation
 

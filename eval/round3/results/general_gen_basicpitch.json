@@ -1,0 +1,182 @@
+{
+  "slakh/Track01876": {
+    "f1": 0.38006756756756765,
+    "precision": 0.34829721362229105,
+    "recall": 0.41821561338289964,
+    "f1_offset": 0.1891891891891892,
+    "n_ref": 538,
+    "n_est": 646,
+    "midi": "eval/heldout/runs/gen_basicpitch/general/slakh/Track01876/general_basic_pitch.mid"
+  },
+  "slakh/Track01877": {
+    "f1": 0.5122637716123845,
+    "precision": 0.5998116760828626,
+    "recall": 0.44701754385964915,
+    "f1_offset": 0.11017289907519098,
+    "n_ref": 1425,
+    "n_est": 1062,
+    "midi": "eval/heldout/runs/gen_basicpitch/general/slakh/Track01877/general_basic_pitch.mid"
+  },
+  "slakh/Track01880": {
+    "f1": 0.3203285420944559,
+    "precision": 0.4254545454545455,
+    "recall": 0.25686059275521406,
+    "f1_offset": 0.16837782340862423,
+    "n_ref": 911,
+    "n_est": 550,
+    "midi": "eval/heldout/runs/gen_basicpitch/general/slakh/Track01880/general_basic_pitch.mid"
+  },
+  "slakh/Track01881": {
+    "f1": 0.5244996549344375,
+    "precision": 0.47146401985111663,
+    "recall": 0.5909797822706065,
+    "f1_offset": 0.09937888198757762,
+    "n_ref": 643,
+    "n_est": 806,
+    "midi": "eval/heldout/runs/gen_basicpitch/general/slakh/Track01881/general_basic_pitch.mid"
+  },
+  "slakh/Track01882": {
+    "f1": 0.3783185840707965,
+    "precision": 0.3131868131868132,
+    "recall": 0.4776536312849162,
+    "f1_offset": 0.165929203539823,
+    "n_ref": 358,
+    "n_est": 546,
+    "midi": "eval/heldout/runs/gen_basicpitch/general/slakh/Track01882/general_basic_pitch.mid"
+  },
+  "slakh/Track01883": {
+    "f1": 0.33995327102803735,
+    "precision": 0.291,
+    "recall": 0.40870786516853935,
+    "f1_offset": 0.14485981308411217,
+    "n_ref": 712,
+    "n_est": 1000,
+    "midi": "eval/heldout/runs/gen_basicpitch/general/slakh/Track01883/general_basic_pitch.mid"
+  },
+  "slakh/Track01884": {
+    "f1": 0.5243362831858407,
+    "precision": 0.4759036144578313,
+    "recall": 0.583743842364532,
+    "f1_offset": 0.14601769911504425,
+    "n_ref": 406,
+    "n_est": 498,
+    "midi": "eval/heldout/runs/gen_basicpitch/general/slakh/Track01884/general_basic_pitch.mid"
+  },
+  "slakh/Track01887": {
+    "f1": 0.5688161693936477,
+    "precision": 0.6466083150984683,
+    "recall": 0.5077319587628866,
+    "f1_offset": 0.3484119345524543,
+    "n_ref": 1164,
+    "n_est": 914,
+    "midi": "eval/heldout/runs/gen_basicpitch/general/slakh/Track01887/general_basic_pitch.mid"
+  },
+  "slakh/Track01888": {
+    "f1": 0.25203252032520324,
+    "precision": 0.21232876712328766,
+    "recall": 0.31,
+    "f1_offset": 0.06991869918699187,
+    "n_ref": 500,
+    "n_est": 730,
+    "midi": "eval/heldout/runs/gen_basicpitch/general/slakh/Track01888/general_basic_pitch.mid"
+  },
+  "slakh/Track01892": {
+    "f1": 0.48767605633802813,
+    "precision": 0.6148723640399556,
+    "recall": 0.40408460977388766,
+    "f1_offset": 0.1795774647887324,
+    "n_ref": 1371,
+    "n_est": 901,
+    "midi": "eval/heldout/runs/gen_basicpitch/general/slakh/Track01892/general_basic_pitch.mid"
+  },
+  "slakh/Track01893": {
+    "f1": 0.430327868852459,
+    "precision": 0.4671857619577308,
+    "recall": 0.39886039886039887,
+    "f1_offset": 0.08811475409836067,
+    "n_ref": 1053,
+    "n_est": 899,
+    "midi": "eval/heldout/runs/gen_basicpitch/general/slakh/Track01893/general_basic_pitch.mid"
+  },
+  "slakh/Track01895": {
+    "f1": 0.5234435049961568,
+    "precision": 0.6878787878787879,
+    "recall": 0.42245657568238215,
+    "f1_offset": 0.18524212144504226,
+    "n_ref": 1612,
+    "n_est": 990,
+    "midi": "eval/heldout/runs/gen_basicpitch/general/slakh/Track01895/general_basic_pitch.mid"
+  },
+  "slakh/Track01898": {
+    "f1": 0.4381625441696113,
+    "precision": 0.4720812182741117,
+    "recall": 0.4087912087912088,
+    "f1_offset": 0.08480565371024734,
+    "n_ref": 455,
+    "n_est": 394,
+    "midi": "eval/heldout/runs/gen_basicpitch/general/slakh/Track01898/general_basic_pitch.mid"
+  },
+  "slakh/Track01899": {
+    "f1": 0.30965147453083114,
+    "precision": 0.2627986348122867,
+    "recall": 0.3768352365415987,
+    "f1_offset": 0.09785522788203753,
+    "n_ref": 613,
+    "n_est": 879,
+    "midi": "eval/heldout/runs/gen_basicpitch/general/slakh/Track01899/general_basic_pitch.mid"
+  },
+  "slakh/Track01900": {
+    "f1": 0.5503772747447847,
+    "precision": 0.6001936108422071,
+    "recall": 0.5081967213114754,
+    "f1_offset": 0.056813138038171326,
+    "n_ref": 1220,
+    "n_est": 1033,
+    "midi": "eval/heldout/runs/gen_basicpitch/general/slakh/Track01900/general_basic_pitch.mid"
+  },
+  "slakh/Track01901": {
+    "f1": 0.5843307943416759,
+    "precision": 0.553038105046344,
+    "recall": 0.6193771626297578,
+    "f1_offset": 0.26550598476605003,
+    "n_ref": 867,
+    "n_est": 971,
+    "midi": "eval/heldout/runs/gen_basicpitch/general/slakh/Track01901/general_basic_pitch.mid"
+  },
+  "slakh/Track01902": {
+    "f1": 0.3651315789473685,
+    "precision": 0.40437158469945356,
+    "recall": 0.3328335832083958,
+    "f1_offset": 0.12335526315789475,
+    "n_ref": 667,
+    "n_est": 549,
+    "midi": "eval/heldout/runs/gen_basicpitch/general/slakh/Track01902/general_basic_pitch.mid"
+  },
+  "slakh/Track01903": {
+    "f1": 0.468503937007874,
+    "precision": 0.6086956521739131,
+    "recall": 0.3808,
+    "f1_offset": 0.17618110236220472,
+    "n_ref": 1250,
+    "n_est": 782,
+    "midi": "eval/heldout/runs/gen_basicpitch/general/slakh/Track01903/general_basic_pitch.mid"
+  },
+  "slakh/Track01905": {
+    "f1": 0.46945337620578775,
+    "precision": 0.44135429262394194,
+    "recall": 0.5013736263736264,
+    "f1_offset": 0.14405144694533764,
+    "n_ref": 728,
+    "n_est": 827,
+    "midi": "eval/heldout/runs/gen_basicpitch/general/slakh/Track01905/general_basic_pitch.mid"
+  },
+  "slakh/Track01906": {
+    "f1": 0.5879003558718862,
+    "precision": 0.5704419889502762,
+    "recall": 0.6064610866372981,
+    "f1_offset": 0.2391459074733096,
+    "n_ref": 681,
+    "n_est": 724,
+    "midi": "eval/heldout/runs/gen_basicpitch/general/slakh/Track01906/general_basic_pitch.mid"
+  }
+}

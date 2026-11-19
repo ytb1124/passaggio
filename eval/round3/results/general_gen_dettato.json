@@ -1,0 +1,182 @@
+{
+  "slakh/Track01876": {
+    "f1": 0.7173689619732785,
+    "precision": 0.8022988505747126,
+    "recall": 0.6486988847583643,
+    "f1_offset": 0.5858170606372045,
+    "n_ref": 538,
+    "n_est": 435,
+    "midi": "eval/heldout/runs/_dettato/mix/slakh/Track01876/all.mid"
+  },
+  "slakh/Track01877": {
+    "f1": 0.7550615323541088,
+    "precision": 0.8692870201096892,
+    "recall": 0.6673684210526316,
+    "f1_offset": 0.5176657403731638,
+    "n_ref": 1425,
+    "n_est": 1094,
+    "midi": "eval/heldout/runs/_dettato/mix/slakh/Track01877/all.mid"
+  },
+  "slakh/Track01880": {
+    "f1": 0.5194071983062809,
+    "precision": 0.7272727272727273,
+    "recall": 0.4039517014270033,
+    "f1_offset": 0.23570924488355682,
+    "n_ref": 911,
+    "n_est": 506,
+    "midi": "eval/heldout/runs/_dettato/mix/slakh/Track01880/all.mid"
+  },
+  "slakh/Track01881": {
+    "f1": 0.7529785544082604,
+    "precision": 0.7694805194805194,
+    "recall": 0.7371695178849145,
+    "f1_offset": 0.1572676727561557,
+    "n_ref": 643,
+    "n_est": 616,
+    "midi": "eval/heldout/runs/_dettato/mix/slakh/Track01881/all.mid"
+  },
+  "slakh/Track01882": {
+    "f1": 0.7987012987012988,
+    "precision": 0.9534883720930233,
+    "recall": 0.6871508379888268,
+    "f1_offset": 0.6558441558441559,
+    "n_ref": 358,
+    "n_est": 258,
+    "midi": "eval/heldout/runs/_dettato/mix/slakh/Track01882/all.mid"
+  },
+  "slakh/Track01883": {
+    "f1": 0.684640522875817,
+    "precision": 0.818359375,
+    "recall": 0.5884831460674157,
+    "f1_offset": 0.5669934640522876,
+    "n_ref": 712,
+    "n_est": 512,
+    "midi": "eval/heldout/runs/_dettato/mix/slakh/Track01883/all.mid"
+  },
+  "slakh/Track01884": {
+    "f1": 0.7826086956521738,
+    "precision": 0.8138297872340425,
+    "recall": 0.7536945812807881,
+    "f1_offset": 0.6368286445012787,
+    "n_ref": 406,
+    "n_est": 376,
+    "midi": "eval/heldout/runs/_dettato/mix/slakh/Track01884/all.mid"
+  },
+  "slakh/Track01887": {
+    "f1": 0.9031690140845071,
+    "precision": 0.9259927797833934,
+    "recall": 0.8814432989690721,
+    "f1_offset": 0.8362676056338029,
+    "n_ref": 1164,
+    "n_est": 1108,
+    "midi": "eval/heldout/runs/_dettato/mix/slakh/Track01887/all.mid"
+  },
+  "slakh/Track01888": {
+    "f1": 0.6357758620689655,
+    "precision": 0.6892523364485982,
+    "recall": 0.59,
+    "f1_offset": 0.45474137931034486,
+    "n_ref": 500,
+    "n_est": 428,
+    "midi": "eval/heldout/runs/_dettato/mix/slakh/Track01888/all.mid"
+  },
+  "slakh/Track01892": {
+    "f1": 0.8199233716475096,
+    "precision": 0.8635996771589992,
+    "recall": 0.7804522246535376,
+    "f1_offset": 0.5318007662835249,
+    "n_ref": 1371,
+    "n_est": 1239,
+    "midi": "eval/heldout/runs/_dettato/mix/slakh/Track01892/all.mid"
+  },
+  "slakh/Track01893": {
+    "f1": 0.6743801652892563,
+    "precision": 0.8031496062992126,
+    "recall": 0.5811965811965812,
+    "f1_offset": 0.21487603305785125,
+    "n_ref": 1053,
+    "n_est": 762,
+    "midi": "eval/heldout/runs/_dettato/mix/slakh/Track01893/all.mid"
+  },
+  "slakh/Track01895": {
+    "f1": 0.8471615720524017,
+    "precision": 0.9238095238095239,
+    "recall": 0.782258064516129,
+    "f1_offset": 0.5495465233456499,
+    "n_ref": 1612,
+    "n_est": 1365,
+    "midi": "eval/heldout/runs/_dettato/mix/slakh/Track01895/all.mid"
+  },
+  "slakh/Track01898": {
+    "f1": 0.7519379844961239,
+    "precision": 0.9122257053291536,
+    "recall": 0.6395604395604395,
+    "f1_offset": 0.36692506459948315,
+    "n_ref": 455,
+    "n_est": 319,
+    "midi": "eval/heldout/runs/_dettato/mix/slakh/Track01898/all.mid"
+  },
+  "slakh/Track01899": {
+    "f1": 0.5587044534412956,
+    "precision": 0.5546623794212219,
+    "recall": 0.5628058727569332,
+    "f1_offset": 0.31417004048582997,
+    "n_ref": 613,
+    "n_est": 622,
+    "midi": "eval/heldout/runs/_dettato/mix/slakh/Track01899/all.mid"
+  },
+  "slakh/Track01900": {
+    "f1": 0.7858306188925082,
+    "precision": 0.7807443365695793,
+    "recall": 0.7909836065573771,
+    "f1_offset": 0.5879478827361564,
+    "n_ref": 1220,
+    "n_est": 1236,
+    "midi": "eval/heldout/runs/_dettato/mix/slakh/Track01900/all.mid"
+  },
+  "slakh/Track01901": {
+    "f1": 0.8309859154929576,
+    "precision": 0.8458781362007168,
+    "recall": 0.8166089965397924,
+    "f1_offset": 0.6713615023474179,
+    "n_ref": 867,
+    "n_est": 837,
+    "midi": "eval/heldout/runs/_dettato/mix/slakh/Track01901/all.mid"
+  },
+  "slakh/Track01902": {
+    "f1": 0.7668944570994686,
+    "precision": 0.7769230769230769,
+    "recall": 0.7571214392803598,
+    "f1_offset": 0.1958997722095672,
+    "n_ref": 667,
+    "n_est": 650,
+    "midi": "eval/heldout/runs/_dettato/mix/slakh/Track01902/all.mid"
+  },
+  "slakh/Track01903": {
+    "f1": 0.7580865603644646,
+    "precision": 0.8804232804232804,
+    "recall": 0.6656,
+    "f1_offset": 0.5375854214123007,
+    "n_ref": 1250,
+    "n_est": 945,
+    "midi": "eval/heldout/runs/_dettato/mix/slakh/Track01903/all.mid"
+  },
+  "slakh/Track01905": {
+    "f1": 0.737891737891738,
+    "precision": 0.7662721893491125,
+    "recall": 0.7115384615384616,
+    "f1_offset": 0.5669515669515669,
+    "n_ref": 728,
+    "n_est": 676,
+    "midi": "eval/heldout/runs/_dettato/mix/slakh/Track01905/all.mid"
+  },
+  "slakh/Track01906": {
+    "f1": 0.7944307944307945,
+    "precision": 0.8981481481481481,
+    "recall": 0.7121879588839941,
+    "f1_offset": 0.592956592956593,
+    "n_ref": 681,
+    "n_est": 540,
+    "midi": "eval/heldout/runs/_dettato/mix/slakh/Track01906/all.mid"
+  }
+}

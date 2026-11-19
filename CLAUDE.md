@@ -46,6 +46,12 @@
 - **라벨 함정 추가**: Slakh Track01898 베이스 정답 전체 중복, Slakh MIDI 격자 위상 오류 곡(Track01895·01903), Slakh 렌더러가 무시한 정답 벤드. 채점 v2(`run_heldout.py`)가 중복을 제거한다.
 - **CPU 운영**: 이 머신(M1 Max 10코어)에서 무거운 실험은 2~3개까지만 동시에, `nice -n 15`와 `OMP_NUM_THREADS=2`로 돌린다(사용자 요청).
 
+## ★ 2026-11-19 Round 3 — dettato (상세: `eval/ROUND3_REPORT.md`) — 기본값·API 변경 없음
+- 드럼 교체 기각(MDB −0.116). Apache 상업용 폴백으로는 egmd보다 유의하게 낫다(MDB +0.197; 학습 데이터에 MUSDB18-HQ 포함, 법적 검토 필요).
+- 베이스 스템 입력 기각. **믹스 입력 베이스는 실베이스 0.770·업라이트 0.741(엄격 0.730·0.676)**로 mix_yourmt3보다 높다. 사전 등록 대상이 아니라 새 라운드가 필요하고, `BASS_MODEL_PLAN.md` 착수 전에 비교해야 한다.
+- General: Slakh +0.293 → 유력 후보. 실제 녹음 다악기 세트로 재검증 전에는 교체하지 않는다.
+- 실행 함정: MPS는 grouper에서 float64 오류가 나서 CPU로만 돌린다(1분 곡 약 3분). 격리 venv는 `.venv-dettato`, 워커는 `eval/heldout/dettato_transcribe.py`.
+
 ## ★ 2026-10-25 Round 2 (상세: `eval/ROUND2_REPORT.md`, `eval/BEST_RESULTS.md` 2-7·3-6·5-1·6) — 기본값·API 변경 없음
 - 후보 5종: MuScriptor(사용자 HF 로그인 후 MDB 드럼 실행: 믹스 −0.105, 스템 −0.050로 기각; Lakh MIDI 학습 → Slakh 계열 세트는 오염), LarsNet 피스 분리 8클래스(차점: MDB 8클래스 +0.055이나 Slakh −0.004 유의 → 미채택), ADT_STR(MDB −0.150, 기각), CASM 비트 후처리(+0.005, 하한 −0.002, 기각), SwiftF0 벤드(−0.184, 기각). Explore This!·arXiv 2601.11768은 가중치/코드 미공개.
 - **함정 기록**: ADT_STR 출력 pitch는 GM이 아니라 저장소 고유 26클래스 코드(`adtstr_transcribe.py` CUSTOM_TO_GM으로 변환). ADTOF 출력 GM은 킥 36·톰 45(35·47 아님). 8클래스 세분기의 MDB 이득은 대부분 "심벌 = ride" 사전확률이었다 — 렌더 데이터로 학습한 심벌 세분기는 킷 간 일반화가 안 된다(곡 단위 CV가 다수 클래스보다 낮음).

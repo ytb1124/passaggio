@@ -255,6 +255,12 @@ Slakh test 20곡(30~90초), mir_eval F-measure(±70 ms). 라벨 오류 2곡(MIDI
 - **SOTA 비교**: 베이스 MIDI 벤드 추정의 공개 벤치마크는 없다. f0 추출 자체의 SOTA인 PESTO(MIR-1K RPA 97.7)와 RMVPE는 보컬로 학습했다. 저음 베이스에서는 신뢰도 척도가 맞지 않거나(RMVPE: 0.5 초과 프레임 14%) 흔들림이 커서(PESTO) 고전적인 pYIN에 졌다.
 - **plateau**: 개발셋 격자 162개 설정에서 pYIN F1이 0.781로 평평하다(평활·데드밴드 무관). 남은 재현율 손실(0.70)은 어택 30 ms 안에서 시작하는 벤드(45%)다.
 
+## 7. Round 3 — dettato (2026-11-19, `eval/ROUND3_REPORT.md`)
+
+- 드럼 dettato_stem MDB 0.743(ADTOF 0.859, −0.116 유의) → 기각. egmd 대비 +0.197 → Apache 폴백 후보.
+- 베이스 stem_dettato: 실베이스 +0.058[−0.002], 업라이트 +0.004 → 기각. 참고 mix_dettato: 0.767/0.770/0.741, 엄격 0.460/0.730/0.676.
+- General(Slakh, 악기 무시): Basic Pitch 0.451 → dettato 0.744(+0.293 [+0.266, +0.322]), YourMT3+ 0.746 → 유력 후보.
+
 ## 재현
 
 ```bash

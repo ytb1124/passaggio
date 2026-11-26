@@ -48,7 +48,9 @@ SETS = {"slakh_realbass": "electric", "slakh_realbass_up": "upright",
         "dev_bends_up": "upright", "bendtest_up": "upright",
         # 베이스 후처리 개발셋: Slakh train, 테스트와 다른 일렉 라이브러리(Black-and-Blue babyblue).
         # 이 라이브러리의 파일 이름은 실제 음보다 한 옥타브 높다(pYIN 실측) — 인덱스에서 −12 보정.
-        "dev_realbass": "electric_dev"}
+        "dev_realbass": "electric_dev",
+        # Round 4(2026-11-21): 믹스→베이스 사전 등록 테스트. 평가에 처음 쓰는 일렉(Black-and-Blue darkblack reg, −12 보정).
+        "slakh_realbass_dk": "electric_dk"}
 SRC_OF = {"dev_bends_up": ROOT / "data" / "raw" / "slakh_train", "bendtest_up": HERE / "data" / "_raw" / "slakh",
           "dev_realbass": ROOT / "data" / "raw" / "slakh_train"}
 BASS_ONLY = {"dev_bends_up", "bendtest_up"}

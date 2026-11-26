@@ -442,14 +442,15 @@ def run_drums_mode(
 # 피아노 외 모드의 전사 백엔드 선택지. 기본값은 DEFAULT_BACKENDS이며 환경변수로 바꿀 수 있다.
 # yourmt3_hybrid: YourMT3+ 원출력을 베이스 후처리(onset union/옥타브/fragment)의 후보로 사용(베이스 전용).
 NOTE_BACKENDS = ("basicpitch", "yourmt3", "yourmt3_hybrid", "dettato")
-# dettato: General 전용 선택 백엔드(2026-11-19, Round 3 "유력 후보" — 실제 녹음 다악기 세트 재검증 전까지
-# 기본값으로 쓰지 않는다). 베이스 모드에서는 받지 않는다(Round 3: 스템 입력 기각).
+# dettato: General 전용(베이스 모드에서는 받지 않는다 — Round 3: 스템 입력 기각).
+# 2026-11-21 General 기본값으로 승격: Slakh +0.293, 실제 녹음 TRIOS +0.222 [+0.187, +0.257] (eval/ROUND4_REPORT.md).
+# .venv-dettato가 없거나 실패하면 Basic Pitch로 폴백한다(result.backend="basicpitch"). 되돌리기: GENERAL_BACKEND=basicpitch.
 NOTE_ONLY_GENERAL = ("dettato",)
 DRUM_BACKENDS = ("egmd", "adtof")
 # 드럼 기본값 adtof(연구용, 2026-10-24): 홀드아웃 실제 녹음(MDB Drums 23곡) 5클래스 F1
 # 0.546 → 0.859(곡별 차이 95% CI +0.25~+0.38) — eval/heldout/RESULTS_HELDOUT.md.
 # ADTOF는 CC BY-NC-SA(비상업)라 상업 배포 시 egmd로 되돌려야 한다. 격리 venv가 없으면 egmd로 폴백.
-DEFAULT_BACKENDS = {"bass": "basicpitch", "general": "basicpitch", "drums": "adtof"}
+DEFAULT_BACKENDS = {"bass": "basicpitch", "general": "dettato", "drums": "adtof"}
 
 
 def resolve_backend(mode: str, backend: str | None) -> str | None:

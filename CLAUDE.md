@@ -24,7 +24,7 @@
 - `POST /api/transcribe` (multipart: `file`, `mode`=piano|bass|general) → `{ jobId }`. 폴링: `GET /api/jobs/{jobId}` → `{ progress, status, error, result }`. `result` = `{ midiUrl, midiFileName, mode }`.
 - `POST /api/separate` (multipart: `file`, `model`=htdemucs|htdemucs_6s) → `{ jobId }`. `result` = `{ stems: {vocals,drums,bass,other: url}, model, device, mode:"separate" }`. (research 1번, Stage 0 stem 분리)
 - `POST /api/drums` (multipart: `file`, `separate`="true"|"false") → `{ jobId }`. `result` = `{ midiUrl, midiFileName, mode:"drums", counts:{kick,snare,hihat}, drumsStemUrl? }`. (research 2번, Drum ADT)
-- **(2026-10-24 추가, 하위호환)** `/api/transcribe`·`/api/drums`에 선택 필드 `backend`: bass=`basicpitch`(기본)|`yourmt3`|`yourmt3_hybrid`, general=`basicpitch`|`yourmt3`, drums=`adtof`(기본, 2026-10-24 변경)|`egmd`. `result.backend`=실제 사용 엔진(격리 venv 없거나 실패 시 기본 엔진으로 폴백), `result.requestedBackend`=요청값. `eval/RESULTS.md`의 "새 엔진이 낮다"는 in-sample 개발셋 결과였고, 홀드아웃(처음 보는 실제 믹스)에서 뒤집혔다 — 아래 항목과 `eval/heldout/`.
+- **(2026-10-24 추가, 하위호환)** `/api/transcribe`·`/api/drums`에 선택 필드 `backend`: bass=`basicpitch`(기본)|`yourmt3`|`yourmt3_hybrid`, general=`dettato`(**2026-11-21부터 기본**, Round 4 섹션)|`basicpitch`|`yourmt3`, drums=`adtof`(기본, 2026-10-24 변경)|`egmd`. `result.backend`=실제 사용 엔진(격리 venv 없거나 실패 시 기본 엔진으로 폴백), `result.requestedBackend`=요청값. `eval/RESULTS.md`의 "새 엔진이 낮다"는 in-sample 개발셋 결과였고, 홀드아웃(처음 보는 실제 믹스)에서 뒤집혔다 — 아래 항목과 `eval/heldout/`.
 - **★ (2026-10-24) 드럼 기본값 `adtof`로 변경 — 연구용 결정**: 홀드아웃 실제 녹음(MDB Drums 23곡) 5클래스 F1 0.546 → **0.859**(곡별 차이 95% CI +0.25~+0.38), 심벌 0.00 → 0.68. 재현: `eval/heldout/run_heldout.py`. **API 응답 변화(프론트 작업자 확인 필요)**: ADTOF 경로의 `counts` 키는 `{kick, snare, hihat, tom, cymbal}` 5개다(egmd 경로는 기존 9-class 키). ADTOF는 오픈/클로즈 하이햇·crash/ride를 구분하지 않는다(GM 36/38/42/45/49만 출력). velocity는 `backend/scripts/drum_velocity.py`로 어택 dB 매핑(egmd와 같은 방식). 격리 venv(`.venv-adtof`)가 없으면 egmd로 폴백하고 `result.backend="egmd"`. **ADTOF는 CC BY-NC-SA(비상업)** — 상업 배포 시 `DRUMS_BACKEND=egmd`로 되돌릴 것. 피아노 회귀 sha256 일치 확인.
 - **(2026-10-24) `/api/transcribe` mode=drums도 분리 후 전사**: `pipeline.transcribe("drums")`가 `separate=True`로 바뀌었다(데스크톱 앱 CLI가 이 경로를 쓴다). 믹스를 그대로 넣으면 E-GMD 분류기 홀드아웃 F1 0.26. 이제 이 경로의 응답에도 `drumsStemUrl`이 들어간다(`/api/drums`와 같은 shape). (2026-10-25) 데스크톱은 ADTOF를 별도 번들 워커(`dist/passaggio-adtof`, `packaging/passaggio-adtof.spec`)로 실행한다 — 격리 venv가 없을 때 `pipeline._adtof_cmd()`가 사이드카 옆 워커를 찾는다.
 - **(2026-10-25 추가, 하위호환 opt-in) 박자 격자·퀀타이즈·피치 벤드** — 필드를 보내지 않으면 출력은 이전과 바이트 단위로 같다(피아노 회귀 sha256 일치).
@@ -45,6 +45,45 @@
 - **비트(R5)**: Beat This!(`backend/scripts/beat_track.py`, 격리 `.venv-beat` 또는 메인 venv 인프로세스, 체크포인트는 사이드카에 동봉).
 - **라벨 함정 추가**: Slakh Track01898 베이스 정답 전체 중복, Slakh MIDI 격자 위상 오류 곡(Track01895·01903), Slakh 렌더러가 무시한 정답 벤드. 채점 v2(`run_heldout.py`)가 중복을 제거한다.
 - **CPU 운영**: 이 머신(M1 Max 10코어)에서 무거운 실험은 2~3개까지만 동시에, `nice -n 15`와 `OMP_NUM_THREADS=2`로 돌린다(사용자 요청).
+
+## ★ 2026-11-19 Round 3 — dettato (상세: `eval/ROUND3_REPORT.md`) — 기본값·API 변경 없음
+- 드럼 교체 기각(MDB −0.116). Apache 상업용 폴백으로는 egmd보다 유의하게 낫다(MDB +0.197; 학습 데이터에 MUSDB18-HQ 포함, 법적 검토 필요).
+- 베이스 스템 입력 기각. **믹스 입력 베이스는 실베이스 0.770·업라이트 0.741(엄격 0.730·0.676)**로 mix_yourmt3보다 높다. 사전 등록 대상이 아니라 새 라운드가 필요하고, `BASS_MODEL_PLAN.md` 착수 전에 비교해야 한다.
+- General: Slakh +0.293 → 유력 후보. 실제 녹음 다악기 세트로 재검증 전에는 교체하지 않는다.
+- **General 음 길이 재채점(2026-11-21)**: 시작+끝 F1에서도 dettato가 Basic Pitch보다 낫다(Slakh +0.335, TRIOS +0.146, CI 하한 > 0). 다만 절대값이 낮다(TRIOS 0.371, 시작만 0.904). dettato는 노트를 짧게 끊는다(중간값 0.285 s 대 정답 0.485 s). General 평가는 앞으로 시작만/시작+끝 F1을 함께 보고. 자세한 표: `eval/ROUND4_REPORT.md` 끝 추가 절.
+- **음 길이 보정 실험(2026-11-21, `eval/NOTELEN_REPORT.md`)**: 사전 등록 N1 불통과 → 기본 경로에 넣지 않음. 노트 끝 늘리기는 TRIOS +0.032 [+0.014, +0.052]지만 Slakh −0.026. dettato가 음을 짧게 끊는 건 **실제 녹음에서만**(신스는 길이 정상) → 신스 개발셋으로는 못 고름. 다음은 실제 녹음 + 노트 끝 정답 개발셋(MAESTRO/MusicNet 등) 확보.
+- **악기 이름 정확도(2026-11-21, `eval/INST_REPORT.md`)**: dettato 트랙 이름 정확도 Slakh test 0.709, TRIOS 0.917; 실제 악기 중 트랙으로 잡힌 비율 0.47/0.79. 확률 문턱으로 확신 없는 이름을 계열/"기타"로 바꾸는 게이트는 사전 등록 I1 불통과(개발셋에서 정밀도 0.90 불가, Slakh CI가 0 포함, 맞는 piano까지 지움) → 넣지 않음. grouper 확률이 보정돼 있지 않아 이름 후처리로는 해결 불가.
+- **General 선택 백엔드로 연결(2026-11-19, 기본값 불변)**: `backend=dettato`(general 전용; bass에 주면 ValueError). 워커 `backend/scripts/dettato_transcribe.py`, 격리 venv `.venv-dettato`(설치: `backend/scripts/setup_isolated_models.sh`, 평가 커밋 c4c52e05 고정). venv가 없거나 실패하면 Basic Pitch로 폴백(`result.backend="basicpitch"`). 결과 `general_dettato.mid` = 저자 `to_midi()` 그대로 — 악기별 트랙(GM program) + 드럼 트랙, 벨로시티도 dettato 값(YourMT3 general처럼 드럼 트랙 포함). `result.dettato = {notes, tracks:[{name,program,drum,notes}], seconds, audio_seconds, device}`.
+- **MPS 우회(설치 패키지는 수정 안 함)**: 2.0.0은 cuda/cpu만 고르고, MPS에서는 `grouper/core.py` `gather()`가 float64 노트 배열을 MPS로 올리다 실패한다. 워커가 `core.gather`를 감싸 float32로 넘긴다(gather 내부가 어차피 `.float()`). 장치 자동 선택 cuda → mps → cpu, `DETTATO_DEVICE`로 고정. 검증: Slakh 3곡에서 MPS 결과가 CPU와 general F1 동일(0.7174/0.7987 동일, 0.8469 vs 0.8472), 노트 수·트랙 동일.
+- **속도(60초 믹스, M1 Max)**: MPS **42~48초**(0.7× 실시간), CPU 단독 8스레드 125초, CPU 3개 동시(2스레드) 187초. 모델 로드 2.4초. 드럼만 5.6초(CPU).
+- eval 배치 워커는 `eval/heldout/dettato_transcribe.py`(CPU, Round 3 재현용) 그대로 둔다.
+
+## ★ 2026-11-21 Round 4 (상세: `eval/ROUND4_REPORT.md`) — General 기본값만 변경
+- **General 실제 녹음(TRIOS 5곡)**: gen_dettato − Basic Pitch **+0.222 [+0.187, +0.257]**(블록 부트스트랩) → 사전 등록 B1 통과.
+- **★ General 기본값 = dettato (2026-11-21, 사용자 승인)**: `pipeline.DEFAULT_BACKENDS["general"]="dettato"`. **API 응답 변화(프론트 확인 필요)**:
+  `backend` 필드 없이 `mode=general`을 보내면 이제 `result.backend="dettato"`, 파일 `general_dettato.mid` = **악기별 트랙(GM program) + 드럼 트랙**,
+  `result.dettato={notes, tracks, seconds, audio_seconds, device}`. 이전 기본(Basic Pitch)은 단일 트랙 `general_basic_pitch.mid`였다.
+  `.venv-dettato`가 없거나(데스크톱 번들 포함) 실패하면 Basic Pitch로 폴백(`result.backend="basicpitch"`). 되돌리기: `GENERAL_BACKEND=basicpitch` 또는 요청에 `backend=basicpitch`.
+  검증: CLI(TRIOS lussier, MPS 17.8초/18초 오디오)와 8001 API 라운드트립(mozart, 트랙 piano·clarinet) 통과. 피아노·베이스·드럼 경로 변경 없음.
+  **프론트 대응(2026-11-21, 사용자 요청으로 백엔드 작업자가 `app/page.tsx` 수정)**: 여러 트랙(또는 드럼 트랙)이 있는 MIDI를 열면
+  노트에 트랙 번호를 붙여 ① 트랙별 색, ② 트랙 범례(클릭하면 음소거, 재생에만 적용), ③ 사운드 "자동(트랙별)" — GM program을 번들 샘플에
+  매핑(`sampleKeyForTrack`: 0–3 피아노, 4–31 일렉피아노, 32 업라이트, 33–39 일렉베이스, 40–55 현, 그 외 패드, 드럼 트랙은 드럼 키트;
+  다른 사운드를 골라도 드럼 트랙은 드럼 키트), ④ 내보내기 시 트랙별로 분리(이름·program 유지, 드럼은 채널 10). 단일 트랙 MIDI는 이전과 동일.
+  검증: tsc·eslint 통과, 브라우저에서 dettato take_five(4트랙 915노트) 로드·재생(피아노·현·드럼 샘플)·음소거·내보내기(4트랙, ch 0/1/2/9), bass_sample(단일 트랙) 회귀 확인.
+  **트랙 표시(2026-11-21, 사용자 결정 "Track N + guess")**: 파일의 악기 이름은 모델 추정이라(`eval/INST_REPORT.md`) 트랙은 "트랙 N"(드럼은 "드럼")으로 보이고 옆에 흐리게 "추정: <파일 속 이름>". 이름은 칸에서 바로 고칠 수 있고(내보내기 트랙 이름에 반영), 소리는 트랙별 선택(자동 모드일 때; 바꾸면 내보내기 program도 그 소리의 GM 번호). `TrackInfo{label?, guess, program, isDrum, muted, sound}`.
+  **샘플 수정(2026-11-26)**: 현악기 샘플(VSCO 2, 패드도 같은 샘플)이 라벨보다 정확히 한 옥타브 높게 재생됐다 — VSCO는 가운데 도를 C3로 적는데 빌드 스크립트가 C4로 읽음(pYIN 실측 +12.00반음). `manifest.json` strings/pad 키 +12, `packaging/build_editor_samples.py`에 +12 반영.
+  또 활 샘플은 소리가 나기까지 0.1~0.4초 걸려 늦게 들렸다 → `app/lib/sampler.ts`가 샘플마다 피크 10% 지점−5 ms부터 재생, 패드 페이드인 0.6→0.15초. 피아노·베이스·일렉피아노 샘플 음높이는 정상(±0.05반음).
+  **박자 눈금(2026-11-26)**: 웹 프론트가 `/api/transcribe`·`/api/drums`(스템 변환 포함)에 `beatGrid=true`를 보낸다 → 결과는 `*_grid.mid`(노트 시각 불변, 템포 맵만 추가).
+  에디터는 템포가 여러 개인 MIDI를 열면 템포 맵을 그대로 보관해 마디선·박선·스냅(드래그·길이·퀀타이즈·붙여넣기·이동)을 실제 박에 맞추고, 내보낼 때 템포 맵을 다시 쓴다. BPM 칸에 값을 치면 고정 템포 격자로 돌아간다. 템포가 하나뿐인 파일은 이전 동작 그대로.
+  검증(take_five, CLI `--beat-grid`): 추적한 박 122개 전부 눈금선과 일치(이전 고정 격자는 중간값 80 ms, 최대 160 ms 어긋남), 퀀타이즈 후 915노트 전부 실제 박의 16분 지점, 내보내기 후 템포 123개 유지·노트 시각 차 ≤0.4 ms.
+  한계: 데스크톱 앱 경로(Tauri `start_python_job`)는 아직 `--beat-grid`를 넘기지 않는다. Beat This 다운비트가 흔들리는 곡(take_five 5/4가 4/4로 잡힘)은 박선은 맞아도 마디 번호가 틀릴 수 있다 — 박자표 선택으로 바꿀 수 있다.
+  화면 톤 정리("AI 티 안 나게")를 한 번 적용했다가 사용자 요청으로 되돌렸다(기존 UI 유지). 정리 버전 사본은 세션 스크래치패드에만 있다.
+  ⚠ 개발 서버 재시작 직후 HMR 웹소켓이 끊기면 CSS 수정이 안 보일 수 있다 — 페이지 새로고침/서버 재시작으로 확인.
+  ⚠ 테스트 시 `PYTORCH_MPS_HIGH_WATERMARK_RATIO`만 설정하면 dettato가 "invalid low watermark ratio"로 죽어 조용히 Basic Pitch로 폴백한다 — LOW도 함께 설정할 것.
+- **믹스→베이스 새 실베이스 세트(darkblack)**: mix_dettato − 현행 +0.216 [+0.102, +0.316], 엄격 +0.231 → A1 통과("전체 곡 → 베이스" opt-in 후보).
+  YourMT3+ 대비 pitch-class는 유의차 없음(A2 불통과, BASS_MODEL_PLAN 유지), 엄격 F1은 +0.445. Track01898은 grouper가 베이스를 일렉피아노로 배정(폴백 필요).
+- **함정**: Black-and-Blue 샘플(babyblue·darkblack) 파일 이름은 실제보다 한 옥타브 높다(−12 보정). darkblack은 이제 테스트 음색이라 학습 금지.
+  TRIOS 정렬 점검에 온셋 강도 곡선을 쓰면 +30 ms 늦게 잡힌다(YourMT3+ 점수가 0.87→0.74로 흔들림) — 다음엔 어택 발치 기준으로.
 
 ## ★ 2026-10-25 Round 2 (상세: `eval/ROUND2_REPORT.md`, `eval/BEST_RESULTS.md` 2-7·3-6·5-1·6) — 기본값·API 변경 없음
 - 후보 5종: MuScriptor(사용자 HF 로그인 후 MDB 드럼 실행: 믹스 −0.105, 스템 −0.050로 기각; Lakh MIDI 학습 → Slakh 계열 세트는 오염), LarsNet 피스 분리 8클래스(차점: MDB 8클래스 +0.055이나 Slakh −0.004 유의 → 미채택), ADT_STR(MDB −0.150, 기각), CASM 비트 후처리(+0.005, 하한 −0.002, 기각), SwiftF0 벤드(−0.184, 기각). Explore This!·arXiv 2601.11768은 가중치/코드 미공개.

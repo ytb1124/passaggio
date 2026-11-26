@@ -33,6 +33,7 @@ DEMUCS_SCRIPT_PATH = BASE_DIR / "backend" / "scripts" / "demucs_separate.py"
 DRUM_SCRIPT_PATH = BASE_DIR / "backend" / "scripts" / "drum_audio_to_midi.py"
 YOURMT3_SCRIPT_PATH = BASE_DIR / "backend" / "scripts" / "yourmt3_transcribe.py"
 ADTOF_SCRIPT_PATH = BASE_DIR / "backend" / "scripts" / "adtof_transcribe.py"
+DETTATO_SCRIPT_PATH = BASE_DIR / "backend" / "scripts" / "dettato_transcribe.py"
 DRUM_VELOCITY_SCRIPT_PATH = BASE_DIR / "backend" / "scripts" / "drum_velocity.py"
 BEAT_GRID_SCRIPT_PATH = BASE_DIR / "backend" / "scripts" / "beat_grid.py"
 PITCH_BEND_SCRIPT_PATH = BASE_DIR / "backend" / "scripts" / "bass_pitch_bend.py"
@@ -192,6 +193,41 @@ def _try_yourmt3(
     }
 
 
+def _try_dettato(
+    input_audio: Path,
+    output_dir: Path,
+    progress: ProgressCallback | None,
+) -> dict | None:
+    """dettato(Apache-2.0)로 전곡을 악기별 트랙으로 전사한다(General 전용 선택 백엔드).
+    격리 venv(.venv-dettato)가 없거나 실패하면 None(→ Basic Pitch 폴백).
+
+    출력은 저자 to_midi() 그대로다: 악기별 트랙(GM program) + 드럼 트랙(is_drum). YourMT3+ general
+    경로처럼 드럼 트랙을 남긴다. 벨로시티도 dettato가 직접 내므로 다시 매기지 않는다.
+    장치는 cuda → mps → cpu 자동 선택(DETTATO_DEVICE로 고정 가능). Round 3: eval/ROUND3_REPORT.md."""
+    py = _isolated_py(".venv-dettato")
+    if py is None or not DETTATO_SCRIPT_PATH.exists():
+        print("dettato venv not found; using Basic Pitch.", file=sys.stderr)
+        return None
+    final_midi = output_dir / "general_dettato.mid"
+    _emit(progress, 25, "Running dettato transcription...")
+    command = [py, str(DETTATO_SCRIPT_PATH), str(input_audio), str(final_midi),
+               "--device", os.environ.get("DETTATO_DEVICE", "auto")]
+    try:
+        completed = _run(command)
+    except (subprocess.CalledProcessError, OSError) as error:
+        print(f"dettato failed ({error}); using Basic Pitch.", file=sys.stderr)
+        return None
+    if not final_midi.exists():
+        return None
+    return {
+        "midiPath": str(final_midi.resolve()),
+        "midiFileName": final_midi.name,
+        "mode": "general",
+        "backend": "dettato",
+        "dettato": _last_json_line(completed.stdout),
+    }
+
+
 def run_bass_mode(
     input_audio: Path,
     output_dir: Path,
@@ -262,6 +298,11 @@ def run_general_mode(
         if result is not None:
             return result
         _emit(progress, 20, "YourMT3+ unavailable; falling back to Basic Pitch.")
+    elif backend == "dettato":
+        result = _try_dettato(input_audio, output_dir, progress)
+        if result is not None:
+            return result
+        _emit(progress, 20, "dettato unavailable; falling back to Basic Pitch.")
     _emit(progress, 25, "Running Basic Pitch general transcription...")
     _run(_basic_pitch_cmd(str(output_dir), str(input_audio)))
 
@@ -400,12 +441,16 @@ def run_drums_mode(
 
 # 피아노 외 모드의 전사 백엔드 선택지. 기본값은 DEFAULT_BACKENDS이며 환경변수로 바꿀 수 있다.
 # yourmt3_hybrid: YourMT3+ 원출력을 베이스 후처리(onset union/옥타브/fragment)의 후보로 사용(베이스 전용).
-NOTE_BACKENDS = ("basicpitch", "yourmt3", "yourmt3_hybrid")
+NOTE_BACKENDS = ("basicpitch", "yourmt3", "yourmt3_hybrid", "dettato")
+# dettato: General 전용(베이스 모드에서는 받지 않는다 — Round 3: 스템 입력 기각).
+# 2026-11-21 General 기본값으로 승격: Slakh +0.293, 실제 녹음 TRIOS +0.222 [+0.187, +0.257] (eval/ROUND4_REPORT.md).
+# .venv-dettato가 없거나 실패하면 Basic Pitch로 폴백한다(result.backend="basicpitch"). 되돌리기: GENERAL_BACKEND=basicpitch.
+NOTE_ONLY_GENERAL = ("dettato",)
 DRUM_BACKENDS = ("egmd", "adtof")
 # 드럼 기본값 adtof(연구용, 2026-10-24): 홀드아웃 실제 녹음(MDB Drums 23곡) 5클래스 F1
 # 0.546 → 0.859(곡별 차이 95% CI +0.25~+0.38) — eval/heldout/RESULTS_HELDOUT.md.
 # ADTOF는 CC BY-NC-SA(비상업)라 상업 배포 시 egmd로 되돌려야 한다. 격리 venv가 없으면 egmd로 폴백.
-DEFAULT_BACKENDS = {"bass": "basicpitch", "general": "basicpitch", "drums": "adtof"}
+DEFAULT_BACKENDS = {"bass": "basicpitch", "general": "dettato", "drums": "adtof"}
 
 
 def resolve_backend(mode: str, backend: str | None) -> str | None:
@@ -417,8 +462,9 @@ def resolve_backend(mode: str, backend: str | None) -> str | None:
     else:
         return None
     value = (backend or os.environ.get(env) or DEFAULT_BACKENDS[mode]).strip().lower()
-    if value not in choices:
-        raise ValueError(f"Unknown {mode} backend: {value} (choices: {', '.join(choices)})")
+    if value not in choices or (mode == "bass" and value in NOTE_ONLY_GENERAL):
+        allowed = [c for c in choices if not (mode == "bass" and c in NOTE_ONLY_GENERAL)]
+        raise ValueError(f"Unknown {mode} backend: {value} (choices: {', '.join(allowed)})")
     return value
 
 

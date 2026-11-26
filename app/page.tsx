@@ -20,6 +20,7 @@ type ModeType = "piano" | "bass" | "drums" | "general";
 type Language = "en" | "ko";
 
 type InstrumentType =
+  | "auto"
   | "grand_piano"
   | "electric_piano"
   | "double_bass"
@@ -38,7 +39,33 @@ type NoteEvent = {
   velocity: number;
   // Pitch-bend curve relative to the note start (cents, ±2 semitone MIDI range).
   bend?: BendPoint[];
+  // Index into `tracks` when the loaded MIDI has several instrument tracks (e.g. dettato General output).
+  track?: number;
 };
+
+// One instrument track of a multi-track MIDI (General mode with dettato writes one track per instrument + drums).
+// The instrument name in the file is only the model's guess (often wrong, eval/INST_REPORT.md), so tracks are shown as
+// "Track N" with the guess beside it; the user can rename a track and pick its sound.
+type TrackInfo = {
+  label?: string; // user-given name; empty → "Track N" (or "Drums")
+  guess: string; // instrument name written in the file (dettato's guess)
+  program: number;
+  isDrum: boolean;
+  muted: boolean;
+  sound: SampleInstrumentKey;
+};
+
+// GM program written on export when the user picks a track's sound.
+const PROGRAM_FOR_SOUND: Record<SampleInstrumentKey, number> = {
+  piano: 0, electric_piano: 4, upright_bass: 32, electric_bass: 33, strings: 48, pad: 89, drums: 0,
+};
+
+// Light colours so the dark note label stays readable; none is the selection orange (#ff9f0a).
+const TRACK_COLORS = ["#34c759", "#64d2ff", "#ff7b9c", "#ffd60a", "#c49bff", "#7ee0c3", "#a3e635", "#f5a9e1", "#9ad0ff", "#d6c08d"];
+
+function trackColor(index: number | undefined) {
+  return index === undefined ? TRACK_COLORS[0] : TRACK_COLORS[index % TRACK_COLORS.length];
+}
 
 type PlaybackInstrument = {
   triggerAttackRelease: (
@@ -95,6 +122,20 @@ type MarqueeBox = {
   width: number;
   height: number;
 };
+
+// Tempo changes from a loaded MIDI (beat-grid files carry one per beat), in the file's own ticks.
+type TempoMap = { ppq: number; tempos: { ticks: number; bpm: number }[] };
+
+function tempoMapTicksToSeconds(map: TempoMap, ticks: number) {
+  let seconds = 0;
+  for (let index = 0; index < map.tempos.length; index++) {
+    const start = map.tempos[index].ticks;
+    if (ticks <= start) break;
+    const end = index + 1 < map.tempos.length ? map.tempos[index + 1].ticks : Infinity;
+    seconds += ((Math.min(ticks, end) - start) / map.ppq) * (60 / map.tempos[index].bpm);
+  }
+  return seconds;
+}
 
 type TimeSignature = {
   numerator: number;
@@ -350,6 +391,7 @@ function getCurrentTimeMs() {
 }
 
 const SAMPLE_INSTRUMENT_BY_TYPE: Record<InstrumentType, SampleInstrumentKey> = {
+  auto: "piano",
   grand_piano: "piano",
   electric_piano: "electric_piano",
   double_bass: "upright_bass",
@@ -358,6 +400,17 @@ const SAMPLE_INSTRUMENT_BY_TYPE: Record<InstrumentType, SampleInstrumentKey> = {
   strings: "strings",
   pad: "pad",
 };
+
+// GM program → closest bundled sample set (only a few are bundled, so families share sounds).
+function sampleKeyForProgram(program: number, isDrum: boolean): SampleInstrumentKey {
+  if (isDrum) return "drums";
+  if (program < 4) return "piano";
+  if (program < 32) return "electric_piano"; // e-pianos, chromatic percussion, organs, guitars
+  if (program === 32) return "upright_bass";
+  if (program < 40) return "electric_bass";
+  if (program < 56) return "strings"; // strings, ensembles, choirs
+  return "pad"; // brass, reeds, pipes, synth leads/pads
+}
 
 // Offline multi-sampled instruments from public/samples (licenses in public/samples/LICENSES.md).
 function createInstrument(type: InstrumentType) {
@@ -598,6 +651,15 @@ const UI_COPY = {
     electricPiano: "Electric Piano",
     strings: "String Ensemble",
     pad: "String Pad",
+    autoSound: "Auto (per track)",
+    tracksLabel: "Tracks",
+    muteHint: "Click to mute or unmute this track",
+    trackN: "Track",
+    drumsTrack: "Drums",
+    guessPrefix: "guess:",
+    guessHint: "Instrument guessed by the transcription model. It can be wrong.",
+    trackNameLabel: "Track name",
+    trackSoundLabel: "Track sound",
     loadingSound: "Loading sound",
     ready: "Ready",
     readyOnPlay: "Ready on play",
@@ -703,6 +765,15 @@ const UI_COPY = {
     electricPiano: "일렉트릭 피아노",
     strings: "현악 앙상블",
     pad: "스트링 패드",
+    autoSound: "자동 (트랙별)",
+    tracksLabel: "트랙",
+    muteHint: "클릭해서 이 트랙을 음소거하거나 다시 켭니다",
+    trackN: "트랙",
+    drumsTrack: "드럼",
+    guessPrefix: "추정:",
+    guessHint: "전사 모델이 추정한 악기예요. 틀릴 수 있어요.",
+    trackNameLabel: "트랙 이름",
+    trackSoundLabel: "트랙 소리",
     loadingSound: "사운드 불러오는 중",
     ready: "준비됨",
     readyOnPlay: "재생 시 준비",
@@ -746,6 +817,7 @@ export default function Home() {
     calculateEditorPitchRange([])
   );
   const [tempoBpm, setTempoBpm] = useState(120);
+  const [tempoMap, setTempoMap] = useState<TempoMap | null>(null);
   const [timeSignature, setTimeSignature] = useState<TimeSignature>({
     numerator: 4,
     denominator: 4,
@@ -803,13 +875,23 @@ export default function Home() {
     useState<InstrumentType>("grand_piano");
   const [isInstrumentLoading, setIsInstrumentLoading] = useState(false);
   const [isInstrumentReady, setIsInstrumentReady] = useState(false);
+  // Multi-track MIDI (empty for single-track files, which keep the old single-instrument behaviour).
+  const [tracks, setTracks] = useState<TrackInfo[]>([]);
   const copy = UI_COPY[language];
+  const trackLabel = (track: TrackInfo, index: number) =>
+    track.label?.trim() || (track.isDrum ? copy.drumsTrack : `${copy.trackN} ${index + 1}`);
+  const soundLabels: Record<SampleInstrumentKey, string> = {
+    piano: copy.grandPiano, electric_piano: copy.electricPiano, upright_bass: copy.doubleBass,
+    electric_bass: copy.electricBass, strings: copy.strings, pad: copy.pad, drums: copy.drumKit,
+  };
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
 
   const instrumentRef = useRef<PlaybackInstrument | null>(null);
+  // Per-sample-set instruments for multi-track playback (auto sound or drum tracks).
+  const trackInstrumentsRef = useRef<Map<SampleInstrumentKey, PlaybackInstrument>>(new Map());
   const progressTimerRef = useRef<number | null>(null);
   const noteDragRef = useRef<NoteDragState | null>(null);
   const marqueeSelectionRef = useRef<MarqueeSelectionState | null>(null);
@@ -901,6 +983,18 @@ export default function Home() {
   );
   const noteVerticalInset = Math.max(2, (noteRowHeight - noteBarHeight) / 2);
   const snapSeconds = secondsPerQuarterBeat * quantizeDivision;
+  // When the MIDI has a tempo map (beat-grid output), grid beats follow the song's real beats.
+  const gridBeatTimes = useMemo(() => {
+    if (!tempoMap) return null;
+    const ticksPerGridBeat = (tempoMap.ppq * 4) / timeSignature.denominator;
+    const times: number[] = [];
+    for (let beat = 0; beat < 50000; beat++) {
+      const seconds = tempoMapTicksToSeconds(tempoMap, beat * ticksPerGridBeat);
+      times.push(seconds);
+      if (beat > 0 && seconds > totalDuration && beat % timeSignature.numerator === 0) break;
+    }
+    return times;
+  }, [tempoMap, timeSignature.denominator, timeSignature.numerator, totalDuration]);
   const pianoRollWidth = Math.max(
     900,
     ((totalDuration + secondsPerBar) / secondsPerQuarterBeat) * pixelsPerBeat
@@ -913,18 +1007,73 @@ export default function Home() {
     { length: pitchRange.max - pitchRange.min + 1 },
     (_, index) => pitchRange.max - index
   );
-  const barMarkers = Array.from(
-    {
-      length: Math.max(
-        1,
-        Math.ceil(Math.max(totalDuration, secondsPerBar) / secondsPerBar)
-      ),
-    },
-    (_, index) => ({
-      bar: index + 1,
-      startSeconds: index * secondsPerBar,
-    })
-  );
+  const gridBeats = gridBeatTimes
+    ? gridBeatTimes.slice(0, -1).map((seconds, index) => ({
+        bar: Math.floor(index / timeSignature.numerator) + 1,
+        beat: index % timeSignature.numerator,
+        seconds,
+      }))
+    : null;
+  const barMarkers = gridBeats
+    ? gridBeats
+        .filter((item) => item.beat === 0)
+        .map((item) => ({ bar: item.bar, startSeconds: item.seconds }))
+    : Array.from(
+        {
+          length: Math.max(
+            1,
+            Math.ceil(Math.max(totalDuration, secondsPerBar) / secondsPerBar)
+          ),
+        },
+        (_, index) => ({
+          bar: index + 1,
+          startSeconds: index * secondsPerBar,
+        })
+      );
+  const gridLines =
+    gridBeats ??
+    barMarkers.flatMap(({ bar, startSeconds }) =>
+      Array.from({ length: timeSignature.numerator }, (_, beat) => ({
+        bar,
+        beat,
+        seconds: startSeconds + beat * secondsPerGridBeat,
+      }))
+    );
+
+  // Snap a time to the grid (subdivisions of the real beats when there is a tempo map).
+  function snapToGrid(seconds: number) {
+    const times = gridBeatTimes;
+    if (!times || times.length < 2) {
+      return Math.max(0, Math.round(seconds / snapSeconds) * snapSeconds);
+    }
+    const beatQuarters = 4 / timeSignature.denominator;
+    if (quantizeDivision >= beatQuarters) {
+      const group = Math.max(1, Math.round(quantizeDivision / beatQuarters));
+      let best = times[0];
+      for (let index = 0; index < times.length; index += group) {
+        if (Math.abs(times[index] - seconds) < Math.abs(best - seconds)) best = times[index];
+      }
+      return best;
+    }
+    let low = 0;
+    let high = times.length - 2;
+    while (low < high) {
+      const middle = (low + high + 1) >> 1;
+      if (times[middle] <= seconds) low = middle;
+      else high = middle - 1;
+    }
+    const step = (times[low + 1] - times[low]) / Math.max(1, Math.round(beatQuarters / quantizeDivision));
+    return Math.max(0, times[low] + Math.round((seconds - times[low]) / step) * step);
+  }
+
+  // Length of one snap step around a time (it varies with the tempo map).
+  function snapStepAt(seconds: number) {
+    const times = gridBeatTimes;
+    if (!times || times.length < 2) return snapSeconds;
+    let index = times.findIndex((time) => time > seconds);
+    if (index <= 0) index = index === 0 ? 1 : times.length - 1;
+    return ((times[index] - times[index - 1]) * quantizeDivision) / (4 / timeSignature.denominator);
+  }
   const secondsToX = (seconds: number) =>
     (seconds / secondsPerQuarterBeat) * pixelsPerBeat;
   const pitchToY = (pitch: number) => (pitchRange.max - pitch) * noteRowHeight;
@@ -936,6 +1085,17 @@ export default function Home() {
       instrumentRef.current.dispose();
       instrumentRef.current = null;
     }
+    trackInstrumentsRef.current.forEach((instrument) => instrument.dispose());
+    trackInstrumentsRef.current = new Map();
+  }
+
+  // Sample sets a multi-track file needs: every track's own sound in auto mode, otherwise drums only.
+  function trackSampleKeys(type: InstrumentType, trackList: TrackInfo[]) {
+    const keys = new Set<SampleInstrumentKey>();
+    trackList.forEach((track) => {
+      if (type === "auto" || track.isDrum) keys.add(track.sound);
+    });
+    return keys;
   }
 
   async function preloadInstrument(type: InstrumentType) {
@@ -947,7 +1107,11 @@ export default function Home() {
     const instrument = createInstrument(type);
     instrumentRef.current = instrument;
 
-    await instrument.load();
+    const extras = new Map<SampleInstrumentKey, MultiSampleInstrument>();
+    trackSampleKeys(type, tracks).forEach((key) => extras.set(key, new MultiSampleInstrument(key)));
+    trackInstrumentsRef.current = extras;
+
+    await Promise.all([instrument.load(), ...[...extras.values()].map((extra) => extra.load())]);
 
     setIsInstrumentLoading(false);
     setIsInstrumentReady(true);
@@ -967,6 +1131,7 @@ export default function Home() {
     setNotes([]);
     setPitchRange(calculateEditorPitchRange([]));
     setTempoBpm(120);
+    setTempoMap(null);
     setTimeSignature({ numerator: 4, denominator: 4 });
     setCurrentTime(0);
     setSelectedNoteIds(new Set());
@@ -993,7 +1158,21 @@ export default function Home() {
   async function loadMidiArrayBuffer(arrayBuffer: ArrayBuffer, fileName: string) {
     const midi = new Midi(arrayBuffer);
 
-    // Beat-grid MIDI carries a tempo per beat; the editor grid uses one tempo, so take the median.
+    // Beat-grid MIDI carries a tempo per beat: keep the whole map so bar lines follow the song.
+    // The BPM box shows the median tempo.
+    const tempoEvents = midi.header.tempos
+      .filter((tempo) => tempo.bpm > 0)
+      .map((tempo) => ({ ticks: tempo.ticks, bpm: tempo.bpm }))
+      .sort((a, b) => a.ticks - b.ticks);
+    const hasTempoChanges = new Set(tempoEvents.map((tempo) => Math.round(tempo.bpm * 100))).size > 1;
+    setTempoMap(
+      hasTempoChanges
+        ? {
+            ppq: midi.header.ppq,
+            tempos: tempoEvents[0].ticks > 0 ? [{ ticks: 0, bpm: 120 }, ...tempoEvents] : tempoEvents,
+          }
+        : null
+    );
     const tempoValues = midi.header.tempos.map((tempo) => tempo.bpm).sort((a, b) => a - b);
     const detectedTempo = tempoValues[Math.floor(tempoValues.length / 2)];
     const detectedTimeSignature = midi.header.timeSignatures[0]?.timeSignature;
@@ -1015,8 +1194,21 @@ export default function Home() {
     });
 
     const extractedNotes: NoteEvent[] = [];
+    const noteTracks = midi.tracks.filter((track) => track.notes.length > 0);
+    // Several instrument tracks (or a drum track) → keep them apart for playback, colour and export.
+    const isMultiTrack =
+      noteTracks.length > 1 || noteTracks.some((track) => track.instrument.percussion);
+    const nextTracks: TrackInfo[] = isMultiTrack
+      ? noteTracks.map((track) => ({
+          guess: track.name || track.instrument.name || "",
+          program: track.instrument.number,
+          isDrum: track.instrument.percussion,
+          muted: false,
+          sound: sampleKeyForProgram(track.instrument.number, track.instrument.percussion),
+        }))
+      : [];
 
-    midi.tracks.forEach((track, trackIndex) => {
+    noteTracks.forEach((track, trackIndex) => {
       const noteBends = bendsForNotes(track.notes, track.pitchBends);
       track.notes.forEach((note, noteIndex) => {
         extractedNotes.push({
@@ -1027,9 +1219,20 @@ export default function Home() {
           duration: note.duration,
           velocity: note.velocity,
           bend: noteBends[noteIndex],
+          ...(isMultiTrack ? { track: trackIndex } : {}),
         });
       });
     });
+
+    stopMidi();
+    disposeInstrument();
+    setIsInstrumentReady(false);
+    setTracks(nextTracks);
+    if (isMultiTrack) {
+      setInstrumentType("auto");
+    } else if (instrumentType === "auto") {
+      setInstrumentType("grand_piano");
+    }
 
     extractedNotes.sort((a, b) => a.time - b.time);
 
@@ -1308,8 +1511,9 @@ export default function Home() {
         ...selectedOriginalNotes.map((note) => note.midi)
       );
       const rawTimeDelta = (deltaX / pixelsPerBeat) * secondsPerQuarterBeat;
-      const snappedTimeDelta =
-        Math.round(rawTimeDelta / snapSeconds) * snapSeconds;
+      const snappedTimeDelta = gridBeatTimes
+        ? snapToGrid(minimumTime + rawTimeDelta) - minimumTime
+        : Math.round(rawTimeDelta / snapSeconds) * snapSeconds;
       const timeDelta = Math.max(-minimumTime, snappedTimeDelta);
       const rawPitchDelta = -Math.round(deltaY / noteRowHeight);
       const pitchDelta = Math.min(
@@ -1341,7 +1545,9 @@ export default function Home() {
         );
         const duration = Math.max(
           MIN_NOTE_DURATION,
-          Math.round(unsnappedDuration / snapSeconds) * snapSeconds
+          gridBeatTimes
+            ? snapToGrid(note.time + unsnappedDuration) - note.time
+            : Math.round(unsnappedDuration / snapSeconds) * snapSeconds
         );
 
         return { ...note, duration };
@@ -1431,7 +1637,7 @@ export default function Home() {
 
       return {
         ...note,
-        time: Math.max(0, Math.round(note.time / snapSeconds) * snapSeconds),
+        time: snapToGrid(note.time),
       };
     });
 
@@ -1445,7 +1651,8 @@ export default function Home() {
 
     const selectedNotes = notes.filter((note) => selectedNoteIds.has(note.id));
     const minimumTime = Math.min(...selectedNotes.map((note) => note.time));
-    const offset = direction === -1 ? Math.max(-minimumTime, -snapSeconds) : snapSeconds;
+    const step = snapStepAt(minimumTime);
+    const offset = direction === -1 ? Math.max(-minimumTime, -step) : step;
 
     commitNotes(
       notes.map((note) =>
@@ -1464,7 +1671,7 @@ export default function Home() {
       .map((note) => ({
         ...note,
         id: makeNoteId(),
-        time: note.time + snapSeconds,
+        time: note.time + snapStepAt(note.time),
       }));
 
     commitNotes([...notes, ...copies].sort((a, b) => a.time - b.time));
@@ -1487,10 +1694,7 @@ export default function Home() {
     const earliestTime = Math.min(
       ...noteClipboardRef.current.map((note) => note.time)
     );
-    const pasteTime = Math.max(
-      0,
-      Math.round(currentTime / snapSeconds) * snapSeconds
-    );
+    const pasteTime = snapToGrid(currentTime);
     const copies = noteClipboardRef.current.map((note) => ({
       ...note,
       id: makeNoteId(),
@@ -1774,6 +1978,8 @@ export default function Home() {
       } else {
         formData.append("mode", "bass");
       }
+      // Ask for beat tracking so the MIDI carries the song's tempo map (note times are unchanged).
+      formData.append("beatGrid", "true");
 
       const response = await fetch(endpoint, {
         method: "POST",
@@ -2034,6 +2240,8 @@ export default function Home() {
       } else {
         formData.append("mode", uploadMode);
       }
+      // Ask for beat tracking so the MIDI carries the song's tempo map (note times are unchanged).
+      formData.append("beatGrid", "true");
 
       const response = await fetch(endpoint, {
         method: "POST",
@@ -2068,8 +2276,13 @@ export default function Home() {
     Tone.Transport.cancel();
 
     notes.forEach((note) => {
+      const track = note.track === undefined ? undefined : tracks[note.track];
+      if (track?.muted) return;
       Tone.Transport.schedule((time) => {
-        const instrument = instrumentRef.current;
+        const instrument =
+          track && (instrumentType === "auto" || track.isDrum)
+            ? trackInstrumentsRef.current.get(track.sound) ?? instrumentRef.current
+            : instrumentRef.current;
         if (!instrument) return;
 
         const noteName = Tone.Frequency(note.midi, "midi").toNote();
@@ -2560,18 +2773,37 @@ export default function Home() {
     }
 
     const midi = new Midi();
-    midi.header.setTempo(safeTempoBpm);
+    if (tempoMap) {
+      const scale = midi.header.ppq / tempoMap.ppq;
+      midi.header.tempos = tempoMap.tempos.map((tempo) => ({
+        ticks: Math.round(tempo.ticks * scale),
+        bpm: tempo.bpm,
+      }));
+    } else {
+      midi.header.setTempo(safeTempoBpm);
+    }
     midi.header.timeSignatures = [
       { ticks: 0, timeSignature: [numerator, denominator] },
     ];
     midi.header.update();
 
-    const track = midi.addTrack();
-    track.name = "Edited Piano Roll";
+    // Multi-track files go back out as one MIDI track per instrument (drums on channel 10).
+    const exportTracks =
+      tracks.length > 0
+        ? tracks.map((info, index) => {
+            const out = midi.addTrack();
+            out.name = trackLabel(info, index);
+            out.instrument.number = info.isDrum ? 0 : info.program;
+            out.channel = info.isDrum ? 9 : [0, 1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13, 14, 15][index % 15];
+            return out;
+          })
+        : [midi.addTrack()];
+    if (tracks.length === 0) exportTracks[0].name = "Edited Piano Roll";
     notes
       .slice()
       .sort((a, b) => a.time - b.time)
       .forEach((note) => {
+        const track = exportTracks[note.track ?? 0] ?? exportTracks[0];
         track.addNote({
           midi: note.midi,
           time: note.time,
@@ -3035,6 +3267,7 @@ export default function Home() {
           <label className="sound-picker">
             <span>{copy.sound}</span>
             <select value={instrumentType} onChange={(event) => { stopMidi(); disposeInstrument(); setIsInstrumentReady(false); setInstrumentType(event.target.value as InstrumentType); }}>
+              {tracks.length > 0 && <option value="auto">{copy.autoSound}</option>}
               <option value="grand_piano">{copy.grandPiano}</option>
               <option value="double_bass">{copy.doubleBass}</option>
               <option value="electric_bass">{copy.electricBass}</option>
@@ -3046,6 +3279,58 @@ export default function Home() {
           </label>
           <span className="instrument-status">{isInstrumentLoading ? copy.loadingSound : isInstrumentReady ? copy.ready : copy.readyOnPlay}</span>
         </div>
+        {tracks.length > 0 && (
+          <div className="track-legend" role="group" aria-label={copy.tracksLabel} style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6, margin: "6px 0" }}>
+            <span style={{ fontSize: 12, opacity: 0.7 }}>{copy.tracksLabel}</span>
+            {tracks.map((track, index) => {
+              const updateTrack = (patch: Partial<TrackInfo>) =>
+                setTracks((current) => current.map((item, itemIndex) => (itemIndex === index ? { ...item, ...patch } : item)));
+              return (
+                <div
+                  key={index}
+                  style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: "3px 6px 3px 4px", borderRadius: 999, fontSize: 12, border: "1px solid rgba(0,0,0,0.08)", background: "rgba(255,255,255,0.7)", opacity: track.muted ? 0.45 : 1 }}
+                >
+                  <button
+                    type="button"
+                    aria-pressed={!track.muted}
+                    title={copy.muteHint}
+                    onClick={() => { stopMidi(); updateTrack({ muted: !track.muted }); }}
+                    style={{ width: 18, height: 18, minHeight: 0, padding: 0, borderRadius: 4, border: "none", background: trackColor(index), display: "inline-block", boxShadow: "none" }}
+                  />
+                  <input
+                    aria-label={copy.trackNameLabel}
+                    value={track.label ?? ""}
+                    placeholder={trackLabel({ ...track, label: "" }, index)}
+                    onChange={(event) => updateTrack({ label: event.target.value })}
+                    size={Math.max(6, (track.label || trackLabel({ ...track, label: "" }, index)).length)}
+                    style={{ border: "none", background: "transparent", fontSize: 12, fontWeight: 600, padding: 0, minHeight: 0, textDecoration: track.muted ? "line-through" : "none" }}
+                  />
+                  {!track.isDrum && track.guess && (
+                    <span title={copy.guessHint} style={{ opacity: 0.55 }}>{copy.guessPrefix} {track.guess}</span>
+                  )}
+                  <select
+                    aria-label={copy.trackSoundLabel}
+                    value={track.sound}
+                    disabled={instrumentType !== "auto"}
+                    onChange={(event) => {
+                      const sound = event.target.value as SampleInstrumentKey;
+                      stopMidi();
+                      disposeInstrument();
+                      setIsInstrumentReady(false);
+                      updateTrack({ sound, program: track.isDrum ? track.program : PROGRAM_FOR_SOUND[sound] });
+                    }}
+                    style={{ fontSize: 12, padding: "1px 4px", minHeight: 0 }}
+                  >
+                    {(track.isDrum ? (["drums"] as SampleInstrumentKey[]) : (Object.keys(soundLabels) as SampleInstrumentKey[]).filter((key) => key !== "drums")).map((key) => (
+                      <option key={key} value={key}>{soundLabels[key]}</option>
+                    ))}
+                  </select>
+                  <span style={{ opacity: 0.5 }}>{notes.filter((note) => note.track === index).length}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
         <label className="transport-timeline">
           <span>{formatTime(currentTime)} <em>/</em> {formatTime(totalDuration)}</span>
           <input type="range" min="0" max={Math.max(totalDuration, 0)} step="0.01" value={Math.min(currentTime, totalDuration)} onChange={(event) => seekTo(Number(event.target.value))} disabled={notes.length === 0} />
@@ -3087,6 +3372,7 @@ export default function Home() {
                 const value = Number(event.target.value);
                 if (Number.isFinite(value)) {
                   setTempoBpm(Math.min(300, Math.max(20, value)));
+                  setTempoMap(null);
                 }
               }}
               aria-label="Grid tempo in beats per minute"
@@ -3411,16 +3697,7 @@ export default function Home() {
               />
             ))}
 
-            {barMarkers.flatMap(({ bar, startSeconds }) =>
-              Array.from(
-                { length: timeSignature.numerator },
-                (_, beat) => ({
-                  bar,
-                  beat,
-                  seconds: startSeconds + beat * secondsPerGridBeat,
-                })
-              )
-            ).map(({ bar, beat, seconds }) => (
+            {gridLines.map(({ bar, beat, seconds }) => (
               <div
                 key={`grid-${bar}-${beat}`}
                 style={{
@@ -3612,12 +3889,12 @@ export default function Home() {
                     overflow: "hidden",
                     background: isSelected
                       ? "#ff9f0a"
-                      : "#34c759",
+                      : trackColor(note.track),
                     boxShadow: isSelected
                       ? "inset 0 1px 0 rgba(255, 255, 255, 0.46)"
                       : "inset 0 1px 0 rgba(255, 255, 255, 0.38)",
                     color: "#052e16",
-                    opacity: 1,
+                    opacity: note.track !== undefined && tracks[note.track]?.muted ? 0.3 : 1,
                     cursor: "grab",
                     touchAction: "none",
                     zIndex: isSelected ? 12 : 10,

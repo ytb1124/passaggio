@@ -166,7 +166,8 @@ def strings():
                 v = int(m.group(2))
                 if (v == 1) != soft:
                     continue
-                midi = midi_of(m.group(1))
+                # VSCO 2 names notes with middle C = C3, so its "C1" is MIDI 36 (checked with pYIN: +12.00 st).
+                midi = midi_of(m.group(1)) + 12
                 if lo <= midi <= hi and midi not in notes:
                     notes[midi] = f
         out.append((max_vel, notes))
@@ -183,7 +184,7 @@ def main() -> int:
         man["drums"] = build("drums", drums(), 4.0, 0.8, False, {"drum": True, "release": 0.3}, pool)
         man["electric_piano"] = build("electric_piano", cp80(), 6.0, 1.0, False, {"release": 0.6}, pool)
         man["strings"] = build("strings", strings(), 8.0, 1.5, False, {"release": 0.8, "attack": 0.08}, pool)
-    man["pad"] = {**man["strings"], "attack": 0.6, "release": 1.8, "filterHz": 2200}
+    man["pad"] = {**man["strings"], "attack": 0.15, "release": 1.8, "filterHz": 2200}
     (OUT / "manifest.json").write_text(json.dumps(man, indent=1))
     total = sum(f.stat().st_size for f in OUT.rglob("*") if f.is_file())
     for k, v in man.items():

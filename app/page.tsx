@@ -123,6 +123,20 @@ type MarqueeBox = {
   height: number;
 };
 
+// Tempo changes from a loaded MIDI (beat-grid files carry one per beat), in the file's own ticks.
+type TempoMap = { ppq: number; tempos: { ticks: number; bpm: number }[] };
+
+function tempoMapTicksToSeconds(map: TempoMap, ticks: number) {
+  let seconds = 0;
+  for (let index = 0; index < map.tempos.length; index++) {
+    const start = map.tempos[index].ticks;
+    if (ticks <= start) break;
+    const end = index + 1 < map.tempos.length ? map.tempos[index + 1].ticks : Infinity;
+    seconds += ((Math.min(ticks, end) - start) / map.ppq) * (60 / map.tempos[index].bpm);
+  }
+  return seconds;
+}
+
 type TimeSignature = {
   numerator: number;
   denominator: number;
@@ -803,6 +817,7 @@ export default function Home() {
     calculateEditorPitchRange([])
   );
   const [tempoBpm, setTempoBpm] = useState(120);
+  const [tempoMap, setTempoMap] = useState<TempoMap | null>(null);
   const [timeSignature, setTimeSignature] = useState<TimeSignature>({
     numerator: 4,
     denominator: 4,
@@ -968,6 +983,18 @@ export default function Home() {
   );
   const noteVerticalInset = Math.max(2, (noteRowHeight - noteBarHeight) / 2);
   const snapSeconds = secondsPerQuarterBeat * quantizeDivision;
+  // When the MIDI has a tempo map (beat-grid output), grid beats follow the song's real beats.
+  const gridBeatTimes = useMemo(() => {
+    if (!tempoMap) return null;
+    const ticksPerGridBeat = (tempoMap.ppq * 4) / timeSignature.denominator;
+    const times: number[] = [];
+    for (let beat = 0; beat < 50000; beat++) {
+      const seconds = tempoMapTicksToSeconds(tempoMap, beat * ticksPerGridBeat);
+      times.push(seconds);
+      if (beat > 0 && seconds > totalDuration && beat % timeSignature.numerator === 0) break;
+    }
+    return times;
+  }, [tempoMap, timeSignature.denominator, timeSignature.numerator, totalDuration]);
   const pianoRollWidth = Math.max(
     900,
     ((totalDuration + secondsPerBar) / secondsPerQuarterBeat) * pixelsPerBeat
@@ -980,18 +1007,73 @@ export default function Home() {
     { length: pitchRange.max - pitchRange.min + 1 },
     (_, index) => pitchRange.max - index
   );
-  const barMarkers = Array.from(
-    {
-      length: Math.max(
-        1,
-        Math.ceil(Math.max(totalDuration, secondsPerBar) / secondsPerBar)
-      ),
-    },
-    (_, index) => ({
-      bar: index + 1,
-      startSeconds: index * secondsPerBar,
-    })
-  );
+  const gridBeats = gridBeatTimes
+    ? gridBeatTimes.slice(0, -1).map((seconds, index) => ({
+        bar: Math.floor(index / timeSignature.numerator) + 1,
+        beat: index % timeSignature.numerator,
+        seconds,
+      }))
+    : null;
+  const barMarkers = gridBeats
+    ? gridBeats
+        .filter((item) => item.beat === 0)
+        .map((item) => ({ bar: item.bar, startSeconds: item.seconds }))
+    : Array.from(
+        {
+          length: Math.max(
+            1,
+            Math.ceil(Math.max(totalDuration, secondsPerBar) / secondsPerBar)
+          ),
+        },
+        (_, index) => ({
+          bar: index + 1,
+          startSeconds: index * secondsPerBar,
+        })
+      );
+  const gridLines =
+    gridBeats ??
+    barMarkers.flatMap(({ bar, startSeconds }) =>
+      Array.from({ length: timeSignature.numerator }, (_, beat) => ({
+        bar,
+        beat,
+        seconds: startSeconds + beat * secondsPerGridBeat,
+      }))
+    );
+
+  // Snap a time to the grid (subdivisions of the real beats when there is a tempo map).
+  function snapToGrid(seconds: number) {
+    const times = gridBeatTimes;
+    if (!times || times.length < 2) {
+      return Math.max(0, Math.round(seconds / snapSeconds) * snapSeconds);
+    }
+    const beatQuarters = 4 / timeSignature.denominator;
+    if (quantizeDivision >= beatQuarters) {
+      const group = Math.max(1, Math.round(quantizeDivision / beatQuarters));
+      let best = times[0];
+      for (let index = 0; index < times.length; index += group) {
+        if (Math.abs(times[index] - seconds) < Math.abs(best - seconds)) best = times[index];
+      }
+      return best;
+    }
+    let low = 0;
+    let high = times.length - 2;
+    while (low < high) {
+      const middle = (low + high + 1) >> 1;
+      if (times[middle] <= seconds) low = middle;
+      else high = middle - 1;
+    }
+    const step = (times[low + 1] - times[low]) / Math.max(1, Math.round(beatQuarters / quantizeDivision));
+    return Math.max(0, times[low] + Math.round((seconds - times[low]) / step) * step);
+  }
+
+  // Length of one snap step around a time (it varies with the tempo map).
+  function snapStepAt(seconds: number) {
+    const times = gridBeatTimes;
+    if (!times || times.length < 2) return snapSeconds;
+    let index = times.findIndex((time) => time > seconds);
+    if (index <= 0) index = index === 0 ? 1 : times.length - 1;
+    return ((times[index] - times[index - 1]) * quantizeDivision) / (4 / timeSignature.denominator);
+  }
   const secondsToX = (seconds: number) =>
     (seconds / secondsPerQuarterBeat) * pixelsPerBeat;
   const pitchToY = (pitch: number) => (pitchRange.max - pitch) * noteRowHeight;
@@ -1049,6 +1131,7 @@ export default function Home() {
     setNotes([]);
     setPitchRange(calculateEditorPitchRange([]));
     setTempoBpm(120);
+    setTempoMap(null);
     setTimeSignature({ numerator: 4, denominator: 4 });
     setCurrentTime(0);
     setSelectedNoteIds(new Set());
@@ -1075,7 +1158,21 @@ export default function Home() {
   async function loadMidiArrayBuffer(arrayBuffer: ArrayBuffer, fileName: string) {
     const midi = new Midi(arrayBuffer);
 
-    // Beat-grid MIDI carries a tempo per beat; the editor grid uses one tempo, so take the median.
+    // Beat-grid MIDI carries a tempo per beat: keep the whole map so bar lines follow the song.
+    // The BPM box shows the median tempo.
+    const tempoEvents = midi.header.tempos
+      .filter((tempo) => tempo.bpm > 0)
+      .map((tempo) => ({ ticks: tempo.ticks, bpm: tempo.bpm }))
+      .sort((a, b) => a.ticks - b.ticks);
+    const hasTempoChanges = new Set(tempoEvents.map((tempo) => Math.round(tempo.bpm * 100))).size > 1;
+    setTempoMap(
+      hasTempoChanges
+        ? {
+            ppq: midi.header.ppq,
+            tempos: tempoEvents[0].ticks > 0 ? [{ ticks: 0, bpm: 120 }, ...tempoEvents] : tempoEvents,
+          }
+        : null
+    );
     const tempoValues = midi.header.tempos.map((tempo) => tempo.bpm).sort((a, b) => a - b);
     const detectedTempo = tempoValues[Math.floor(tempoValues.length / 2)];
     const detectedTimeSignature = midi.header.timeSignatures[0]?.timeSignature;
@@ -1414,8 +1511,9 @@ export default function Home() {
         ...selectedOriginalNotes.map((note) => note.midi)
       );
       const rawTimeDelta = (deltaX / pixelsPerBeat) * secondsPerQuarterBeat;
-      const snappedTimeDelta =
-        Math.round(rawTimeDelta / snapSeconds) * snapSeconds;
+      const snappedTimeDelta = gridBeatTimes
+        ? snapToGrid(minimumTime + rawTimeDelta) - minimumTime
+        : Math.round(rawTimeDelta / snapSeconds) * snapSeconds;
       const timeDelta = Math.max(-minimumTime, snappedTimeDelta);
       const rawPitchDelta = -Math.round(deltaY / noteRowHeight);
       const pitchDelta = Math.min(
@@ -1447,7 +1545,9 @@ export default function Home() {
         );
         const duration = Math.max(
           MIN_NOTE_DURATION,
-          Math.round(unsnappedDuration / snapSeconds) * snapSeconds
+          gridBeatTimes
+            ? snapToGrid(note.time + unsnappedDuration) - note.time
+            : Math.round(unsnappedDuration / snapSeconds) * snapSeconds
         );
 
         return { ...note, duration };
@@ -1537,7 +1637,7 @@ export default function Home() {
 
       return {
         ...note,
-        time: Math.max(0, Math.round(note.time / snapSeconds) * snapSeconds),
+        time: snapToGrid(note.time),
       };
     });
 
@@ -1551,7 +1651,8 @@ export default function Home() {
 
     const selectedNotes = notes.filter((note) => selectedNoteIds.has(note.id));
     const minimumTime = Math.min(...selectedNotes.map((note) => note.time));
-    const offset = direction === -1 ? Math.max(-minimumTime, -snapSeconds) : snapSeconds;
+    const step = snapStepAt(minimumTime);
+    const offset = direction === -1 ? Math.max(-minimumTime, -step) : step;
 
     commitNotes(
       notes.map((note) =>
@@ -1570,7 +1671,7 @@ export default function Home() {
       .map((note) => ({
         ...note,
         id: makeNoteId(),
-        time: note.time + snapSeconds,
+        time: note.time + snapStepAt(note.time),
       }));
 
     commitNotes([...notes, ...copies].sort((a, b) => a.time - b.time));
@@ -1593,10 +1694,7 @@ export default function Home() {
     const earliestTime = Math.min(
       ...noteClipboardRef.current.map((note) => note.time)
     );
-    const pasteTime = Math.max(
-      0,
-      Math.round(currentTime / snapSeconds) * snapSeconds
-    );
+    const pasteTime = snapToGrid(currentTime);
     const copies = noteClipboardRef.current.map((note) => ({
       ...note,
       id: makeNoteId(),
@@ -1880,6 +1978,8 @@ export default function Home() {
       } else {
         formData.append("mode", "bass");
       }
+      // Ask for beat tracking so the MIDI carries the song's tempo map (note times are unchanged).
+      formData.append("beatGrid", "true");
 
       const response = await fetch(endpoint, {
         method: "POST",
@@ -2140,6 +2240,8 @@ export default function Home() {
       } else {
         formData.append("mode", uploadMode);
       }
+      // Ask for beat tracking so the MIDI carries the song's tempo map (note times are unchanged).
+      formData.append("beatGrid", "true");
 
       const response = await fetch(endpoint, {
         method: "POST",
@@ -2671,7 +2773,15 @@ export default function Home() {
     }
 
     const midi = new Midi();
-    midi.header.setTempo(safeTempoBpm);
+    if (tempoMap) {
+      const scale = midi.header.ppq / tempoMap.ppq;
+      midi.header.tempos = tempoMap.tempos.map((tempo) => ({
+        ticks: Math.round(tempo.ticks * scale),
+        bpm: tempo.bpm,
+      }));
+    } else {
+      midi.header.setTempo(safeTempoBpm);
+    }
     midi.header.timeSignatures = [
       { ticks: 0, timeSignature: [numerator, denominator] },
     ];
@@ -3262,6 +3372,7 @@ export default function Home() {
                 const value = Number(event.target.value);
                 if (Number.isFinite(value)) {
                   setTempoBpm(Math.min(300, Math.max(20, value)));
+                  setTempoMap(null);
                 }
               }}
               aria-label="Grid tempo in beats per minute"
@@ -3586,16 +3697,7 @@ export default function Home() {
               />
             ))}
 
-            {barMarkers.flatMap(({ bar, startSeconds }) =>
-              Array.from(
-                { length: timeSignature.numerator },
-                (_, beat) => ({
-                  bar,
-                  beat,
-                  seconds: startSeconds + beat * secondsPerGridBeat,
-                })
-              )
-            ).map(({ bar, beat, seconds }) => (
+            {gridLines.map(({ bar, beat, seconds }) => (
               <div
                 key={`grid-${bar}-${beat}`}
                 style={{

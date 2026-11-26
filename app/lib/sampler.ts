@@ -35,7 +35,27 @@ function loadManifest() {
   return manifestPromise;
 }
 
-type Layer = { maxVel: number; keys: number[]; buffers: Map<number, Tone.ToneAudioBuffer> };
+type Layer = {
+  maxVel: number;
+  keys: number[];
+  buffers: Map<number, Tone.ToneAudioBuffer>;
+  starts: Map<number, number>;
+};
+
+/**
+ * Seconds of near-silence before the sound starts (first sample above 10% of the peak, minus 5 ms).
+ * Some samples (bowed strings especially) take 0.1–0.4 s to speak, which made notes sound late.
+ */
+function leadInSeconds(buffer: Tone.ToneAudioBuffer) {
+  const data = buffer.getChannelData(0);
+  let peak = 0;
+  for (let i = 0; i < data.length; i++) peak = Math.max(peak, Math.abs(data[i]));
+  if (peak === 0) return 0;
+  const threshold = peak * 0.1;
+  let index = 0;
+  while (index < data.length && Math.abs(data[index]) < threshold) index++;
+  return Math.max(0, index / buffer.sampleRate - 0.005);
+}
 
 // Open hi-hat is choked by closed or pedal hi-hat, as on a real kit.
 const HIHAT_CHOKERS = new Set([42, 44]);
@@ -67,13 +87,15 @@ export class MultiSampleInstrument {
     this.layers = await Promise.all(
       entry.layers.map(async (layer) => {
         const buffers = new Map<number, Tone.ToneAudioBuffer>();
+        const starts = new Map<number, number>();
         await Promise.all(
           Object.entries(layer.notes).map(async ([midi, file]) => {
             const buffer = await new Tone.ToneAudioBuffer().load(`${SAMPLE_ROOT}${entry.dir.replace(/^samples\//, "")}${file}`);
             buffers.set(Number(midi), buffer);
+            starts.set(Number(midi), leadInSeconds(buffer));
           })
         );
-        return { maxVel: layer.maxVel, keys: [...buffers.keys()].sort((a, b) => a - b), buffers };
+        return { maxVel: layer.maxVel, keys: [...buffers.keys()].sort((a, b) => a - b), buffers, starts };
       })
     );
   }
@@ -97,13 +119,13 @@ export class MultiSampleInstrument {
     if (this.entry?.drum) {
       const key = layer.buffers.has(midi) ? midi : DRUM_FALLBACK;
       const buffer = layer.buffers.get(key);
-      return buffer ? { buffer, sourceMidi: midi } : null;
+      return buffer ? { buffer, sourceMidi: midi, start: layer.starts.get(key) ?? 0 } : null;
     }
     let nearest = layer.keys[0];
     for (const key of layer.keys) {
       if (Math.abs(key - midi) < Math.abs(nearest - midi)) nearest = key;
     }
-    return { buffer: layer.buffers.get(nearest)!, sourceMidi: nearest };
+    return { buffer: layer.buffers.get(nearest)!, sourceMidi: nearest, start: layer.starts.get(nearest) ?? 0 };
   }
 
   triggerAttackRelease(
@@ -145,7 +167,7 @@ export class MultiSampleInstrument {
     const releaseAt = when + Math.max(duration, attack);
     env.gain.setValueAtTime(level, releaseAt);
     env.gain.setTargetAtTime(0, releaseAt, release / 4);
-    source.start(when);
+    source.start(when, choice.start);
     source.stop(releaseAt + release * 1.5);
     source.onended = () => {
       source.dispose();
